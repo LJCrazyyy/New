@@ -1,15 +1,18 @@
 'use client'
 
-import { Bell, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { NotificationBell } from '@/components/dashboard/notification-bell'
+import type { UserData } from '@/components/login-page'
 
 interface StudentHeaderProps {
   onLogout?: () => void
+  currentUser: UserData
+  onNavigateSection?: (section: string) => void
 }
 
-export function StudentHeader({ onLogout }: StudentHeaderProps) {
+export function StudentHeader({ onLogout, currentUser, onNavigateSection }: StudentHeaderProps) {
   const handleLogoutClick = () => {
-    console.log('[v0] Logout button clicked')
     if (onLogout) {
       onLogout()
     }
@@ -24,9 +27,7 @@ export function StudentHeader({ onLogout }: StudentHeaderProps) {
         </div>
         
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <NotificationBell currentUser={currentUser} onNavigateSection={onNavigateSection} />
           <Button 
             variant="ghost" 
             size="icon"

@@ -5,7 +5,9 @@ import {
   UserCheck,
   FileText,
   Settings,
-  BarChart3
+  BarChart3,
+  HeartPulse,
+  AlertTriangle,
 } from 'lucide-react'
 
 interface AdminSidebarProps {
@@ -19,6 +21,8 @@ export function AdminSidebar({ activeSection, onSectionChange }: AdminSidebarPro
     { id: 'users', label: 'User Management', icon: Users },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'enrollment', label: 'Enrollment', icon: UserCheck },
+    { id: 'medical-records', label: 'Medical Records', icon: HeartPulse },
+    { id: 'discipline-records', label: 'Discipline Records', icon: AlertTriangle },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileText },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },

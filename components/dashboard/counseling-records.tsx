@@ -6,40 +6,20 @@ import { MessageCircle, Calendar, User } from 'lucide-react';
 
 interface CounselingSession {
   id: string;
-  date: string;
-  counselorName: string;
-  reason: string;
-  actionsTaken: string;
-  followUpDate: string | null;
+  sessionDate: string;
+  topic: string;
+  summary: string;
+  nextStep: string;
+  counselor?: {
+    name?: string;
+  };
 }
 
-export function CounselingRecords() {
-  const sessions: CounselingSession[] = [
-    {
-      id: '1',
-      date: 'March 10, 2024',
-      counselorName: 'Ms. Sarah Johnson',
-      reason: 'Academic Planning',
-      actionsTaken: 'Discussed course selection for next semester',
-      followUpDate: 'April 15, 2024',
-    },
-    {
-      id: '2',
-      date: 'February 28, 2024',
-      counselorName: 'Mr. David Lee',
-      reason: 'Stress Management',
-      actionsTaken: 'Introduced stress management techniques and resources',
-      followUpDate: null,
-    },
-    {
-      id: '3',
-      date: 'January 22, 2024',
-      counselorName: 'Ms. Sarah Johnson',
-      reason: 'Career Guidance',
-      actionsTaken: 'Reviewed career options and internship opportunities',
-      followUpDate: 'March 5, 2024',
-    },
-  ];
+interface CounselingRecordsProps {
+  sessions: CounselingSession[];
+}
+
+export function CounselingRecords({ sessions }: CounselingRecordsProps) {
 
   const getReasonColor = (reason: string | undefined) => {
     if (!reason) return 'bg-gray-700/30 text-gray-200 hover:bg-gray-700/50';
@@ -79,25 +59,25 @@ export function CounselingRecords() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <Calendar className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-gray-300">{session.date}</span>
+                      <span className="text-sm text-gray-300">{new Date(session.sessionDate).toLocaleDateString()}</span>
                     </div>
                     <div className="flex items-center gap-2 mb-3">
                       <User className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm font-medium text-gray-200">{session.counselorName}</span>
+                      <span className="text-sm font-medium text-gray-200">{session.counselor?.name ?? 'Counselor'}</span>
                     </div>
                   </div>
-                  <Badge className={getReasonColor()}>{session.reason}</Badge>
+                  <Badge className={getReasonColor(session.topic)}>{session.topic}</Badge>
                 </div>
 
                 <div className="space-y-2 mb-3">
                   <p className="text-xs font-semibold text-gray-400 uppercase">Actions Taken</p>
-                  <p className="text-sm text-gray-300">{session.actionsTaken}</p>
+                  <p className="text-sm text-gray-300">{session.summary}</p>
                 </div>
 
-                {session.followUpDate && (
+                {session.nextStep && (
                   <div className="border-t border-gray-700 pt-3 mt-3">
                     <p className="text-xs font-semibold text-gray-400 uppercase mb-1">Follow-up Date</p>
-                    <p className="text-sm text-amber-400">{session.followUpDate}</p>
+                    <p className="text-sm text-amber-400">{session.nextStep}</p>
                   </div>
                 )}
               </div>

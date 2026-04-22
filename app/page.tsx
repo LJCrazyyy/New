@@ -55,15 +55,15 @@ export default function Page() {
   // Dashboard State
   if (appState === 'dashboard' && currentUser) {
     if (currentUser.role === 'student') {
-      return <StudentDashboard onLogout={handleLogout} />
+      return <StudentDashboard currentUser={currentUser} onLogout={handleLogout} />
     }
 
     if (currentUser.role === 'faculty') {
-      return <FacultyDashboard onLogout={handleLogout} />
+      return <FacultyDashboard currentUser={currentUser} onLogout={handleLogout} />
     }
 
     if (currentUser.role === 'admin') {
-      return <AdminDashboard onLogout={handleLogout} />
+      return <AdminDashboard currentUser={currentUser} onLogout={handleLogout} />
     }
   }
 

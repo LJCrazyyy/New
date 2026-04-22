@@ -2,53 +2,24 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Download, Eye, Upload } from 'lucide-react';
+import { FileText, Download, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Document {
   id: string;
-  name: string;
-  type: string;
-  uploadDate: string;
-  size: string;
+  title: string;
+  fileName: string;
+  fileUrl: string;
+  status: string;
+  createdAt: string;
   category: string;
 }
 
-export function StudentDocuments() {
-  const documents: Document[] = [
-    {
-      id: '1',
-      name: 'Official_Transcript_2024.pdf',
-      type: 'PDF',
-      uploadDate: 'March 8, 2024',
-      size: '2.4 MB',
-      category: 'Academic',
-    },
-    {
-      id: '2',
-      name: 'Certificate_Web_Development.pdf',
-      type: 'PDF',
-      uploadDate: 'February 20, 2024',
-      size: '1.8 MB',
-      category: 'Certificate',
-    },
-    {
-      id: '3',
-      name: 'Scholarship_Application_2024.docx',
-      type: 'DOCX',
-      uploadDate: 'January 15, 2024',
-      size: '850 KB',
-      category: 'Application',
-    },
-    {
-      id: '4',
-      name: 'Recommendation_Letter.pdf',
-      type: 'PDF',
-      uploadDate: 'December 10, 2023',
-      size: '1.2 MB',
-      category: 'Letter',
-    },
-  ];
+interface StudentDocumentsProps {
+  documents: Document[];
+}
+
+export function StudentDocuments({ documents }: StudentDocumentsProps) {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -76,12 +47,8 @@ export function StudentDocuments() {
               <CardDescription>Manage your documents and certifications</CardDescription>
             </div>
           </div>
-          <Button
-            size="sm"
-            className="bg-cyan-600 hover:bg-cyan-700 text-white flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Upload
+          <Button size="sm" className="bg-cyan-600 hover:bg-cyan-700 text-white" disabled>
+            Admin Managed
           </Button>
         </div>
       </CardHeader>
@@ -96,13 +63,13 @@ export function StudentDocuments() {
                 <div className="flex items-center gap-3 flex-1">
                   <FileText className="h-5 w-5 text-gray-400" />
                   <div className="flex-1">
-                    <p className="font-medium text-white text-sm">{doc.name}</p>
+                    <p className="font-medium text-white text-sm">{doc.title}</p>
                     <div className="flex items-center gap-2 mt-1 text-xs">
-                      <span className="text-gray-400">{doc.uploadDate}</span>
+                      <span className="text-gray-400">{new Date(doc.createdAt).toLocaleDateString()}</span>
                       <span className="text-gray-500">•</span>
-                      <span className="text-gray-400">{doc.size}</span>
+                      <span className="text-gray-400">{doc.fileName}</span>
                       <span className="text-gray-500">•</span>
-                      <Badge className={getCategoryColor()}>{doc.category}</Badge>
+                      <Badge className={getCategoryColor(doc.category)}>{doc.category}</Badge>
                     </div>
                   </div>
                 </div>
@@ -112,6 +79,7 @@ export function StudentDocuments() {
                     size="sm"
                     variant="ghost"
                     className="text-gray-400 hover:text-white hover:bg-gray-800"
+                    onClick={() => window.open(doc.fileUrl, '_blank')}
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -119,6 +87,7 @@ export function StudentDocuments() {
                     size="sm"
                     variant="ghost"
                     className="text-gray-400 hover:text-white hover:bg-gray-800"
+                    onClick={() => window.open(doc.fileUrl, '_blank')}
                   >
                     <Download className="h-4 w-4" />
                   </Button>

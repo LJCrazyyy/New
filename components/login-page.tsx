@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -19,14 +19,14 @@ export interface UserData {
   role: 'student' | 'faculty' | 'admin'
 }
 
-const mockUsers: Record<string, { email: string; password: string; user: UserData }> = {
+const demoUsers: Record<string, { email: string; password: string; user: UserData }> = {
   student: {
-    email: 'student@school.com',
+    email: 'aaron.adams@school.edu',
     password: 'student123',
     user: {
       id: 'STU001',
-      name: 'John Smith',
-      email: 'student@school.com',
+      name: 'Aaron Adams',
+      email: 'aaron.adams@school.edu',
       role: 'student',
     },
   },
@@ -52,30 +52,100 @@ const mockUsers: Record<string, { email: string; password: string; user: UserDat
   },
 }
 
+const defaultPasswords: Record<'student' | 'faculty' | 'admin', string> = {
+  student: 'student123',
+  faculty: 'faculty123',
+  admin: 'admin123',
+}
+
 export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
-  const [email, setEmail] = useState(mockUsers[role].email)
-  const [password, setPassword] = useState(mockUsers[role].password)
+  const [email, setEmail] = useState(demoUsers[role].email)
+  const [password, setPassword] = useState(demoUsers[role].password)
+  const [studentPage, setStudentPage] = useState(1)
+  const [studentPages, setStudentPages] = useState(1)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const loadRoleAccount = async (targetRole: LoginPageProps['role'], page = 1) => {
+    if (targetRole !== 'student') {
+      setStudentPages(1)
+      setEmail(demoUsers[targetRole].email)
+      setPassword(defaultPasswords[targetRole])
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/users?role=${targetRole}&limit=1&page=${page}&sort=name&order=asc`)
+      const payload = await response.json()
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Failed to load demo account.')
+      }
+
+      const account = Array.isArray(payload.data) ? payload.data[0] : null
+      const pagesFromMeta = Number(payload?.meta?.pagination?.pages)
+
+      setStudentPages(Number.isFinite(pagesFromMeta) && pagesFromMeta > 0 ? pagesFromMeta : 1)
+
+      if (account?.email) {
+        setEmail(account.email)
+        setPassword(defaultPasswords[targetRole])
+        return
+      }
+
+      setEmail(demoUsers[targetRole].email)
+      setPassword(demoUsers[targetRole].password)
+    } catch {
+      setEmail(demoUsers[targetRole].email)
+      setPassword(demoUsers[targetRole].password)
+    }
+  }
+
+  useEffect(() => {
+    setStudentPage(1)
+    loadRoleAccount(role, 1)
+  }, [role])
+
+  const onNextStudent = () => {
+    const nextPage = studentPage >= studentPages ? 1 : studentPage + 1
+    setStudentPage(nextPage)
+    loadRoleAccount('student', nextPage)
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      const mockUser = mockUsers[role]
-      
-      if (email === mockUser.email && password === mockUser.password) {
-        setIsLoading(false)
-        onLoginSuccess(mockUser.user)
-      } else {
-        setIsLoading(false)
-        setError('Invalid email or password')
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password, role }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Invalid email or password')
       }
-    }, 500)
+
+      const loggedInUser = payload.data.user
+
+      onLoginSuccess({
+        id: loggedInUser.id || loggedInUser.systemId,
+        name: loggedInUser.name,
+        email: loggedInUser.email,
+        role: loggedInUser.role,
+      })
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : 'Login failed')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const roleDisplayName = {
@@ -107,7 +177,7 @@ export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
               <label className="text-sm font-medium text-gray-300">Email Address</label>
               <Input
                 type="email"
-                placeholder={mockUsers[role].email}
+                placeholder={demoUsers[role].email}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
@@ -148,6 +218,18 @@ export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
                 {isLoading ? 'Signing in...' : 'Sign In'}
               </Button>
 
+              {role === 'student' && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onNextStudent}
+                  disabled={isLoading}
+                  className="w-full text-gray-300 border-gray-700 hover:bg-gray-800"
+                >
+                  Next Student
+                </Button>
+              )}
+
               <Button
                 type="button"
                 variant="outline"
@@ -164,9 +246,9 @@ export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
                 Demo credentials pre-filled
               </p>
               <p className="text-xs text-gray-600 text-center mt-2">
-                Email: {mockUsers[role].email}
+                Email: {email || demoUsers[role].email}
                 <br />
-                Password: {mockUsers[role].password}
+                Password: {defaultPasswords[role]}
               </p>
             </div>
           </form>

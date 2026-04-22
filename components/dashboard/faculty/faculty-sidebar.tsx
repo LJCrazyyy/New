@@ -4,15 +4,19 @@ import {
   FileText,
   Users,
   TrendingUp,
-  CheckSquare
+  CheckSquare,
+  BookUser,
+  HeartPulse,
 } from 'lucide-react'
 
 interface FacultySidebarProps {
   activeSection: string
   onSectionChange: (section: string) => void
+  facultyName?: string
+  department?: string
 }
 
-export function FacultySidebar({ activeSection, onSectionChange }: FacultySidebarProps) {
+export function FacultySidebar({ activeSection, onSectionChange, facultyName, department }: FacultySidebarProps) {
   const sections = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'courses', label: 'My Courses', icon: BookOpen },
@@ -20,6 +24,8 @@ export function FacultySidebar({ activeSection, onSectionChange }: FacultySideba
     { id: 'roster', label: 'Class Roster', icon: Users },
     { id: 'performance', label: 'Performance', icon: TrendingUp },
     { id: 'attendance', label: 'Attendance', icon: CheckSquare },
+    { id: 'guidance-records', label: 'Guidance Records', icon: BookUser },
+    { id: 'medical-records', label: 'Medical Records', icon: HeartPulse },
   ]
 
   return (
@@ -53,8 +59,8 @@ export function FacultySidebar({ activeSection, onSectionChange }: FacultySideba
 
       <div className="p-4 border-t border-gray-800">
         <div className="bg-gray-800/50 rounded-lg p-3 text-xs text-gray-400">
-          <p className="font-semibold text-white mb-1">Dr. John Smith</p>
-          <p>Computer Science</p>
+          <p className="font-semibold text-white mb-1">{facultyName ?? 'Faculty Member'}</p>
+          <p>{department ?? 'Department'}</p>
         </div>
       </div>
     </aside>

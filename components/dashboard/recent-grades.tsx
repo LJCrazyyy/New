@@ -5,53 +5,23 @@ import { Badge } from '@/components/ui/badge'
 import { BarChart3 } from 'lucide-react'
 
 interface RecentGradesProps {
+  grades: Array<{
+    id: string
+    code: string
+    name: string
+    prelim: number | null
+    midterm: number | null
+    final: number | null
+    average: number | null
+    remarks: string
+  }>
+  progress?: {
+    cumulativeGPA?: number
+  }
   fullWidth?: boolean
 }
 
-export function RecentGrades({ fullWidth }: RecentGradesProps) {
-  // Mock grade data
-  const grades = [
-    {
-      id: 1,
-      code: 'CS101',
-      name: 'Data Structures',
-      prelim: 88,
-      midterm: 90,
-      final: 89,
-      average: 89,
-      remarks: 'Excellent',
-    },
-    {
-      id: 2,
-      code: 'CS102',
-      name: 'Web Development',
-      prelim: 85,
-      midterm: 87,
-      final: 86,
-      average: 86,
-      remarks: 'Very Good',
-    },
-    {
-      id: 3,
-      code: 'IT150',
-      name: 'Database Systems',
-      prelim: 92,
-      midterm: 91,
-      final: null,
-      average: null,
-      remarks: 'Pending',
-    },
-    {
-      id: 4,
-      code: 'MATH201',
-      name: 'Advanced Calculus',
-      prelim: 80,
-      midterm: 82,
-      final: null,
-      average: null,
-      remarks: 'In Progress',
-    },
-  ]
+export function RecentGrades({ grades, progress, fullWidth }: RecentGradesProps) {
 
   const getGradeColor = (average: number | null) => {
     if (!average) return 'text-muted-foreground'
@@ -126,7 +96,8 @@ export function RecentGrades({ fullWidth }: RecentGradesProps) {
       {fullWidth && (
         <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border">
           <p className="text-sm text-muted-foreground">
-            Overall GPA This Semester: <span className="font-semibold text-foreground">3.45</span>
+            Overall GPA This Semester:{' '}
+            <span className="font-semibold text-foreground">{progress?.cumulativeGPA?.toFixed(2) ?? 'N/A'}</span>
           </p>
         </div>
       )}

@@ -1,32 +1,140 @@
+'use client'
+
+import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { Download, FileText } from 'lucide-react'
 
+type UserRecord = {
+  role: 'student' | 'faculty' | 'admin'
+}
+
+type CourseRecord = {
+  code: string
+  enrolledCount: number
+  capacity: number
+}
+
+type EnrollmentRecord = {
+  status: 'enrolled' | 'completed' | 'dropped' | 'pending'
+}
+
 export function AdminReports() {
-  const courseEnrollmentData = [
-    { course: 'CS101', enrolled: 45, capacity: 50 },
-    { course: 'CS301', enrolled: 32, capacity: 40 },
-    { course: 'CS401', enrolled: 28, capacity: 35 },
-    { course: 'MATH101', enrolled: 52, capacity: 55 },
-    { course: 'ENG101', enrolled: 35, capacity: 40 }
-  ]
+  const [users, setUsers] = useState<UserRecord[]>([])
+  const [courses, setCourses] = useState<CourseRecord[]>([])
+  const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
 
-  const degreeDistributionData = [
-    { name: 'Bachelor', value: 800, color: '#3B82F6' },
-    { name: 'Master', value: 300, color: '#8B5CF6' },
-    { name: 'PhD', value: 150, color: '#10B981' }
-  ]
+  useEffect(() => {
+    let mounted = true
 
-  const reports = [
-    { name: 'Student Enrollment Report', description: 'Complete enrollment statistics by semester', date: '2024-04-10' },
-    { name: 'Faculty Performance Report', description: 'Teaching effectiveness and student satisfaction', date: '2024-04-09' },
-    { name: 'Academic Progress Report', description: 'Student GPA distribution and academic standing', date: '2024-04-08' },
-    { name: 'Financial Summary', description: 'Tuition revenue and expenses summary', date: '2024-04-07' }
-  ]
+    async function loadData() {
+      setIsLoading(true)
+      setError('')
+
+      try {
+        const [usersResponse, coursesResponse, enrollmentsResponse] = await Promise.all([
+          fetch('/api/users?limit=2000'),
+          fetch('/api/courses?limit=1000&sort=code&order=asc'),
+          fetch('/api/enrollments?limit=2000'),
+        ])
+
+        const usersPayload = await usersResponse.json()
+        const coursesPayload = await coursesResponse.json()
+        const enrollmentsPayload = await enrollmentsResponse.json()
+
+        if (!usersResponse.ok || !usersPayload.success) {
+          throw new Error(usersPayload.message || 'Failed to load users report data.')
+        }
+        if (!coursesResponse.ok || !coursesPayload.success) {
+          throw new Error(coursesPayload.message || 'Failed to load courses report data.')
+        }
+        if (!enrollmentsResponse.ok || !enrollmentsPayload.success) {
+          throw new Error(enrollmentsPayload.message || 'Failed to load enrollments report data.')
+        }
+
+        if (mounted) {
+          setUsers(Array.isArray(usersPayload.data) ? usersPayload.data : [])
+          setCourses(Array.isArray(coursesPayload.data) ? coursesPayload.data : [])
+          setEnrollments(Array.isArray(enrollmentsPayload.data) ? enrollmentsPayload.data : [])
+        }
+      } catch (loadError) {
+        if (mounted) {
+          setError(loadError instanceof Error ? loadError.message : 'Failed to load report data.')
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadData()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const courseEnrollmentData = useMemo(() => {
+    return courses.slice(0, 8).map((course) => ({
+      course: course.code,
+      enrolled: course.enrolledCount ?? 0,
+      capacity: course.capacity ?? 0,
+    }))
+  }, [courses])
+
+  const degreeDistributionData = useMemo(() => {
+    const studentCount = users.filter((user) => user.role === 'student').length
+    const facultyCount = users.filter((user) => user.role === 'faculty').length
+    const adminCount = users.filter((user) => user.role === 'admin').length
+
+    return [
+      { name: 'Students', value: studentCount, color: '#3B82F6' },
+      { name: 'Faculty', value: facultyCount, color: '#8B5CF6' },
+      { name: 'Admins', value: adminCount, color: '#10B981' },
+    ]
+  }, [users])
+
+  const reports = useMemo(() => {
+    const totalEnrollments = enrollments.length
+    const pendingEnrollments = enrollments.filter((enrollment) => enrollment.status === 'pending').length
+    const droppedEnrollments = enrollments.filter((enrollment) => enrollment.status === 'dropped').length
+    const completionRate = totalEnrollments === 0
+      ? 0
+      : Math.round((enrollments.filter((enrollment) => enrollment.status === 'completed').length / totalEnrollments) * 100)
+
+    return [
+      {
+        name: 'Enrollment Summary',
+        description: `Total ${totalEnrollments} enrollments with ${pendingEnrollments} pending review.`,
+        date: new Date().toLocaleDateString(),
+      },
+      {
+        name: 'Course Capacity Snapshot',
+        description: `${courses.length} active courses tracked in the system.`,
+        date: new Date().toLocaleDateString(),
+      },
+      {
+        name: 'Student Lifecycle',
+        description: `${droppedEnrollments} dropped enrollments and ${completionRate}% completion rate.`,
+        date: new Date().toLocaleDateString(),
+      },
+      {
+        name: 'User Distribution',
+        description: `${users.length} total accounts across students, faculty, and admins.`,
+        date: new Date().toLocaleDateString(),
+      },
+    ]
+  }, [courses, enrollments, users])
 
   return (
     <div className="space-y-6">
+      {isLoading && <p className="text-sm text-gray-400">Loading reports...</p>}
+      {error && <p className="text-sm text-red-400">{error}</p>}
+
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Course Enrollment */}
@@ -50,11 +158,11 @@ export function AdminReports() {
           </CardContent>
         </Card>
 
-        {/* Degree Distribution */}
+        {/* User Distribution */}
         <Card className="bg-gray-900 border-gray-800">
           <CardHeader>
-            <CardTitle className="text-white">Degree Distribution</CardTitle>
-            <CardDescription>Student distribution by degree level</CardDescription>
+            <CardTitle className="text-white">User Distribution</CardTitle>
+            <CardDescription>Account distribution by role</CardDescription>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
@@ -84,7 +192,7 @@ export function AdminReports() {
       <Card className="bg-gray-900 border-gray-800">
         <CardHeader>
           <CardTitle className="text-white">Available Reports</CardTitle>
-          <CardDescription>Download system reports and analytics</CardDescription>
+          <CardDescription>Live-generated analytics summaries</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
@@ -100,9 +208,9 @@ export function AdminReports() {
                     <p className="text-gray-500 text-xs mt-1">Generated: {report.date}</p>
                   </div>
                 </div>
-                <Button className="bg-blue-600 hover:bg-blue-700">
+                <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => window.print()}>
                   <Download className="h-4 w-4 mr-2" />
-                  Download
+                  Print
                 </Button>
               </div>
             ))}

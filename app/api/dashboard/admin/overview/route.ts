@@ -1,0 +1,88 @@
+import { connectToDatabase } from '@/lib/mongodb'
+import {
+  AuditLog,
+  Course,
+  Enrollment,
+  User,
+  SystemSetting,
+} from '@/lib/system-models'
+import { normalizeError, serializeRecord } from '@/lib/api-resources'
+
+export const runtime = 'nodejs'
+
+function apiError(message: string, status: number, details?: Record<string, unknown>) {
+  return Response.json(
+    {
+      success: false,
+      message,
+      ...(details ? { details } : {}),
+    },
+    { status }
+  )
+}
+
+function apiSuccess(data: unknown, status = 200) {
+  return Response.json(
+    {
+      success: true,
+      data,
+    },
+    { status }
+  )
+}
+
+export async function GET() {
+  try {
+    await connectToDatabase()
+
+    const [studentCount, facultyCount, adminCount, courseCount, enrollmentCount, recentLogs, recentSettings, recentCourses] = await Promise.all([
+      User.countDocuments({ role: 'student' }),
+      User.countDocuments({ role: 'faculty' }),
+      User.countDocuments({ role: 'admin' }),
+      Course.countDocuments({}),
+      Enrollment.countDocuments({}),
+      AuditLog.find().sort({ occurredAt: -1 }).limit(8),
+      SystemSetting.find().sort({ key: 1 }).limit(10),
+      Course.find().sort({ createdAt: -1 }).limit(5),
+    ])
+
+    const activeEnrollments = await Enrollment.countDocuments({ status: 'enrolled' })
+    const averageGpaResult = await User.aggregate([
+      { $match: { role: 'student' } },
+      {
+        $lookup: {
+          from: 'studentprofiles',
+          localField: '_id',
+          foreignField: 'user',
+          as: 'profile',
+        },
+      },
+      { $unwind: '$profile' },
+      {
+        $group: {
+          _id: null,
+          averageGpa: { $avg: '$profile.gpa' },
+        },
+      },
+    ])
+
+    const averageGpa = averageGpaResult[0]?.averageGpa ?? 0
+
+    return apiSuccess({
+      stats: {
+        students: studentCount,
+        faculty: facultyCount,
+        admins: adminCount,
+        courses: courseCount,
+        enrollments: enrollmentCount,
+        activeEnrollments,
+        averageGpa: Number(averageGpa.toFixed ? averageGpa.toFixed(2) : averageGpa),
+      },
+      recentLogs: serializeRecord(recentLogs),
+      recentSettings: serializeRecord(recentSettings),
+      recentCourses: serializeRecord(recentCourses),
+    })
+  } catch (error) {
+    return apiError(normalizeError(error), 500)
+  }
+}

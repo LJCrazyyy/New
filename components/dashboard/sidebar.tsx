@@ -71,12 +71,6 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t border-border pt-4">
-        <Button variant="ghost" className="w-full justify-start gap-3 text-destructive hover:text-destructive">
-          <LogOut className="h-4 w-4" />
-          <span>Logout</span>
-        </Button>
-      </div>
     </aside>
   )
 }

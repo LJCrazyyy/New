@@ -5,53 +5,21 @@ import { Badge } from '@/components/ui/badge'
 import { BookOpen } from 'lucide-react'
 
 interface CurrentCoursesProps {
+  courses: Array<{
+    id: string
+    code: string
+    name: string
+    instructor: string
+    schedule: string
+    room: string
+    units: number
+    status: string
+  }>
   fullWidth?: boolean
 }
 
-export function CurrentCourses({ fullWidth }: CurrentCoursesProps) {
-  // Mock course data
-  const courses = [
-    {
-      id: 1,
-      code: 'CS101',
-      name: 'Data Structures',
-      instructor: 'Dr. Maria Santos',
-      schedule: 'MWF 9:00 AM - 10:30 AM',
-      room: 'Room 301',
-      units: 3,
-      status: 'Active',
-    },
-    {
-      id: 2,
-      code: 'CS102',
-      name: 'Web Development',
-      instructor: 'Prof. John Reyes',
-      schedule: 'TTh 1:00 PM - 2:30 PM',
-      room: 'Room 205',
-      units: 3,
-      status: 'Active',
-    },
-    {
-      id: 3,
-      code: 'IT150',
-      name: 'Database Systems',
-      instructor: 'Dr. Carlos Gonzalez',
-      schedule: 'MWF 2:00 PM - 3:30 PM',
-      room: 'Lab 101',
-      units: 4,
-      status: 'Active',
-    },
-    {
-      id: 4,
-      code: 'MATH201',
-      name: 'Advanced Calculus',
-      instructor: 'Prof. Ana Martinez',
-      schedule: 'TTh 10:00 AM - 11:30 AM',
-      room: 'Room 401',
-      units: 3,
-      status: 'Active',
-    },
-  ]
+export function CurrentCourses({ courses, fullWidth }: CurrentCoursesProps) {
+  const totalUnits = courses.reduce((sum, course) => sum + (course.units ?? 0), 0)
 
   return (
     <Card className={`p-6 ${fullWidth ? '' : ''}`}>
@@ -93,7 +61,7 @@ export function CurrentCourses({ fullWidth }: CurrentCoursesProps) {
       {fullWidth && (
         <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border">
           <p className="text-sm text-muted-foreground">
-            Total Units This Semester: <span className="font-semibold text-foreground">13 units</span>
+            Total Units This Semester: <span className="font-semibold text-foreground">{totalUnits} units</span>
           </p>
         </div>
       )}

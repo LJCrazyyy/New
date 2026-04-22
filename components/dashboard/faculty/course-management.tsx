@@ -1,44 +1,23 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Edit, Users, Calendar, BookOpen } from 'lucide-react'
+import { Users, BookOpen } from 'lucide-react'
 
-export function CourseManagement() {
-  const courses = [
-    {
-      id: 'CS101',
-      name: 'Introduction to Programming',
-      code: 'CS101',
-      section: '01',
-      schedule: 'MWF 10:00-11:00 AM',
-      room: 'Science Bldg 101',
-      students: 45,
-      units: 3,
-      semester: 'Spring 2024'
-    },
-    {
-      id: 'CS301',
-      name: 'Data Structures',
-      code: 'CS301',
-      section: '02',
-      schedule: 'TTh 14:00-15:30',
-      room: 'Science Bldg 205',
-      students: 32,
-      units: 3,
-      semester: 'Spring 2024'
-    },
-    {
-      id: 'CS401',
-      name: 'Database Systems',
-      code: 'CS401',
-      section: '01',
-      schedule: 'MWF 13:00-14:00',
-      room: 'Science Bldg 301',
-      students: 28,
-      units: 4,
-      semester: 'Spring 2024'
-    }
-  ]
+interface CourseManagementProps {
+  courses: Array<{
+    id: string
+    name: string
+    code: string
+    section: string
+    schedule: string
+    room: string
+    enrolledCount: number
+    units: number
+    semester: string
+  }>
+  fullWidth?: boolean
+}
+
+export function CourseManagement({ courses, fullWidth }: CourseManagementProps) {
 
   return (
     <Card className="bg-gray-900 border-gray-800">
@@ -49,16 +28,12 @@ export function CourseManagement() {
               <BookOpen className="h-5 w-5" />
               My Courses
             </CardTitle>
-            <CardDescription>Spring 2024 Semester</CardDescription>
+            <CardDescription>{courses.length} assigned courses</CardDescription>
           </div>
-          <Button className="bg-purple-600 hover:bg-purple-700">
-            <Edit className="h-4 w-4 mr-2" />
-            Manage
-          </Button>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className={fullWidth ? 'grid grid-cols-1 lg:grid-cols-2 gap-4' : 'space-y-4'}>
           {courses.map((course) => (
             <div key={course.id} className="bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors">
               <div className="flex items-start justify-between mb-3">
@@ -76,17 +51,17 @@ export function CourseManagement() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
                 <div>
                   <p className="text-gray-400">Schedule</p>
-                  <p className="text-white font-medium">{course.schedule}</p>
+                  <p className="text-white font-medium">{course.schedule || 'TBA'}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Room</p>
-                  <p className="text-white font-medium">{course.room}</p>
+                  <p className="text-white font-medium">{course.room || 'TBA'}</p>
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4 text-gray-400" />
                   <div>
                     <p className="text-gray-400">Students</p>
-                    <p className="text-white font-medium">{course.students}</p>
+                    <p className="text-white font-medium">{course.enrolledCount ?? 0}</p>
                   </div>
                 </div>
                 <div>

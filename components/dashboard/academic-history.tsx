@@ -6,67 +6,41 @@ import { BookOpen, TrendingUp, Zap } from 'lucide-react';
 
 interface AcademicActivity {
   id: string;
-  date: string;
-  type: 'Enrollment' | 'Grade Change' | 'Status Change' | 'Milestone';
+  recordedAt: string;
+  type: 'enrollment' | 'grade-change' | 'status-change' | 'milestone';
   description: string;
   details: string;
 }
 
-export function AcademicHistory() {
-  const activities: AcademicActivity[] = [
-    {
-      id: '1',
-      date: 'March 11, 2024',
-      type: 'Milestone',
-      description: 'Completed 60 Units',
-      details: 'Achieved 60 total units completed milestone',
-    },
-    {
-      id: '2',
-      date: 'March 5, 2024',
-      type: 'Grade Change',
-      description: 'Grade Posted - CS401',
-      details: 'Final grade for Computer Networks: A- (3.7)',
-    },
-    {
-      id: '3',
-      date: 'March 1, 2024',
-      type: 'Enrollment',
-      description: 'Enrolled in Spring 2024 Courses',
-      details: 'Successfully enrolled in 4 courses for Spring semester',
-    },
-    {
-      id: '4',
-      date: 'February 15, 2024',
-      type: 'Status Change',
-      description: 'GPA Achieved 3.5+',
-      details: 'Current semester GPA: 3.6 - Excellent academic standing',
-    },
-    {
-      id: '5',
-      date: 'February 1, 2024',
-      type: 'Enrollment',
-      description: 'Spring 2024 Registration Open',
-      details: 'Course registration period started',
-    },
-    {
-      id: '6',
-      date: 'January 20, 2024',
-      type: 'Milestone',
-      description: 'Completed 50 Units',
-      details: 'Achieved 50 total units completed milestone',
-    },
-  ];
+interface AcademicHistoryProps {
+  activities: AcademicActivity[];
+}
+
+export function AcademicHistory({ activities }: AcademicHistoryProps) {
+  const getTypeLabel = (type: AcademicActivity['type']) => {
+    switch (type) {
+      case 'enrollment':
+        return 'Enrollment';
+      case 'grade-change':
+        return 'Grade Change';
+      case 'status-change':
+        return 'Status Change';
+      case 'milestone':
+        return 'Milestone';
+      default:
+        return 'Activity';
+    }
+  };
 
   const getActivityColor = (type: string) => {
     switch (type) {
-      case 'Enrollment':
+      case 'enrollment':
         return 'bg-blue-900/30 text-blue-200 hover:bg-blue-900/50';
-      case 'Grade Change':
+      case 'grade-change':
         return 'bg-green-900/30 text-green-200 hover:bg-green-900/50';
-      case 'Status Change':
+      case 'status-change':
         return 'bg-amber-900/30 text-amber-200 hover:bg-amber-900/50';
-      case 'Milestone':
+      case 'milestone':
         return 'bg-purple-900/30 text-purple-200 hover:bg-purple-900/50';
       default:
         return 'bg-gray-700/30 text-gray-200 hover:bg-gray-700/50';
@@ -75,11 +49,11 @@ export function AcademicHistory() {
 
   const getActivityIcon = (type: string) => {
     switch (type) {
-      case 'Enrollment':
+      case 'enrollment':
         return <BookOpen className="h-4 w-4" />;
-      case 'Grade Change':
+      case 'grade-change':
         return <TrendingUp className="h-4 w-4" />;
-      case 'Milestone':
+      case 'milestone':
         return <Zap className="h-4 w-4" />;
       default:
         return <TrendingUp className="h-4 w-4" />;
@@ -123,9 +97,9 @@ export function AcademicHistory() {
                 <div className="flex-1 pt-1 pb-4">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-semibold text-white">{activity.description}</h4>
-                    <Badge className={getActivityColor()}>{activity.type}</Badge>
+                    <Badge className={getActivityColor(activity.type)}>{getTypeLabel(activity.type)}</Badge>
                   </div>
-                  <p className="text-sm text-gray-400 mb-1">{activity.date}</p>
+                  <p className="text-sm text-gray-400 mb-1">{new Date(activity.recordedAt).toLocaleDateString()}</p>
                   <p className="text-sm text-gray-300">{activity.details}</p>
                 </div>
               </div>

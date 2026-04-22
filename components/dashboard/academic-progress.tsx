@@ -4,18 +4,31 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { AlertCircle, TrendingUp } from 'lucide-react'
 
-export function AcademicProgress() {
-  // Mock academic data
+interface AcademicProgressProps {
+  progress?: {
+    cumulativeGPA: number
+    totalUnitsRequired: number
+    totalUnitsCompleted: number
+    coreUnitsCompleted: number
+    electiveUnitsCompleted: number
+    status: string
+    currentYear: number
+    currentSemester: number | string
+    alerts: string
+  }
+}
+
+export function AcademicProgress({ progress }: AcademicProgressProps) {
   const tracker = {
-    cumulativeGPA: 3.45,
-    totalUnitsRequired: 120,
-    totalUnitsCompleted: 45,
-    coreUnitsCompleted: 30,
-    electiveUnitsCompleted: 15,
-    status: 'On Track',
-    currentYear: 2,
-    currentSemester: 1,
-    alerts: 'No active alerts',
+    cumulativeGPA: progress?.cumulativeGPA ?? 0,
+    totalUnitsRequired: progress?.totalUnitsRequired ?? 120,
+    totalUnitsCompleted: progress?.totalUnitsCompleted ?? 0,
+    coreUnitsCompleted: progress?.coreUnitsCompleted ?? 0,
+    electiveUnitsCompleted: progress?.electiveUnitsCompleted ?? 0,
+    status: progress?.status ?? 'No Data',
+    currentYear: progress?.currentYear ?? 1,
+    currentSemester: progress?.currentSemester ?? 'Current Semester',
+    alerts: progress?.alerts ?? 'No active alerts.',
   }
 
   const progressPercentage = (tracker.totalUnitsCompleted / tracker.totalUnitsRequired) * 100
@@ -85,7 +98,7 @@ export function AcademicProgress() {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Current Semester</p>
-                <p className="text-lg font-semibold text-foreground">Semester {tracker.currentSemester}</p>
+                <p className="text-lg font-semibold text-foreground">{tracker.currentSemester}</p>
               </div>
             </div>
           </div>

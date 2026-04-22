@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { StudentHeader } from './student-header'
 import { StudentProfile } from './student-profile'
 import { AcademicProgress } from './academic-progress'
@@ -13,48 +13,193 @@ import { StudentOrganizations } from './student-organizations'
 import { StudentDocuments } from './student-documents'
 import { AcademicHistory } from './academic-history'
 import { Sidebar } from './sidebar'
+import type { UserData } from '@/components/login-page'
 
 interface StudentDashboardProps {
+  currentUser: UserData
   onLogout?: () => void
 }
 
-export function StudentDashboard({ onLogout }: StudentDashboardProps) {
+type StudentDashboardData = {
+  student: {
+    id: string
+    name: string
+    email: string
+    systemId: string
+  }
+  profile: {
+    studentNumber: string
+    course: string
+    section: string
+    yearLevel: string
+    admissionDate?: string
+  } | null
+  progress: {
+    cumulativeGPA: number
+    totalUnitsRequired: number
+    totalUnitsCompleted: number
+    totalUnitsEnrolled: number
+    coreUnitsCompleted: number
+    electiveUnitsCompleted: number
+    status: string
+    currentYear: number
+    currentSemester: string | number
+    alerts: string
+  }
+  currentCourses: Array<{
+    id: string
+    code: string
+    name: string
+    instructor: string
+    schedule: string
+    room: string
+    units: number
+    status: string
+  }>
+  recentGrades: Array<{
+    id: string
+    code: string
+    name: string
+    prelim: number | null
+    midterm: number | null
+    final: number | null
+    average: number | null
+    remarks: string
+  }>
+  academicHistory: Array<{
+    id: string
+    recordedAt: string
+    type: 'enrollment' | 'grade-change' | 'status-change' | 'milestone'
+    description: string
+    details: string
+  }>
+  medicalRecords: Array<{
+    id: string
+    title: string
+    category: string
+    notes: string
+    status?: string
+    recordedAt: string
+  }>
+  counselingRecords: Array<{
+    id: string
+    sessionDate: string
+    topic: string
+    summary: string
+    nextStep: string
+    counselor?: {
+      name?: string
+    }
+  }>
+  disciplineRecords: Array<{
+    id: string
+    incidentDate: string
+    incident: string
+    severity: string
+    actionTaken: string
+    status: string
+  }>
+  documents: Array<{
+    id: string
+    title: string
+    category: string
+    fileName: string
+    fileUrl: string
+    status: string
+    createdAt: string
+  }>
+  organizations: Array<{
+    id: string
+    organizationName: string
+    role: string
+    joinedAt: string
+    status: string
+  }>
+}
+
+export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProps) {
   const [activeSection, setActiveSection] = useState('overview')
+  const [data, setData] = useState<StudentDashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadDashboardData() {
+      setIsLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch(`/api/dashboard/student/${currentUser.id}`)
+        const payload = await response.json()
+
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.message || 'Unable to load student dashboard data.')
+        }
+
+        if (mounted) {
+          setData(payload.data as StudentDashboardData)
+        }
+      } catch (loadError) {
+        if (mounted) {
+          setError(loadError instanceof Error ? loadError.message : 'Unable to load student dashboard data.')
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadDashboardData()
+
+    return () => {
+      mounted = false
+    }
+  }, [currentUser.id])
 
   return (
     <div className="min-h-screen bg-background">
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       
       <main className="md:ml-64">
-        <StudentHeader onLogout={onLogout} />
+        <StudentHeader
+          onLogout={onLogout}
+          currentUser={currentUser}
+          onNavigateSection={setActiveSection}
+        />
         
         <div className="p-4 md:p-8 space-y-6">
+          {error && <p className="text-sm text-red-500">{error}</p>}
+          {isLoading && <p className="text-sm text-muted-foreground">Loading student dashboard...</p>}
+
           {activeSection === 'overview' && (
             <>
               <div className="grid gap-6 md:grid-cols-3">
                 <div className="md:col-span-1">
-                  <StudentProfile />
+                  <StudentProfile student={data?.student} profile={data?.profile} />
                 </div>
                 <div className="md:col-span-2">
-                  <AcademicProgress />
+                  <AcademicProgress progress={data?.progress} />
                 </div>
               </div>
               
               <div className="grid gap-6 lg:grid-cols-2">
-                <CurrentCourses />
-                <RecentGrades />
+                <CurrentCourses courses={data?.currentCourses ?? []} />
+                <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} />
               </div>
             </>
           )}
           
-          {activeSection === 'courses' && <CurrentCourses />}
-          {activeSection === 'grades' && <RecentGrades />}
-          {activeSection === 'academic-history' && <AcademicHistory />}
-          {activeSection === 'health' && <MedicalRecords />}
-          {activeSection === 'counseling' && <CounselingRecords />}
-          {activeSection === 'discipline' && <DisciplineRecords />}
-          {activeSection === 'organizations' && <StudentOrganizations />}
-          {activeSection === 'documents' && <StudentDocuments />}
+          {activeSection === 'courses' && <CurrentCourses courses={data?.currentCourses ?? []} fullWidth />}
+          {activeSection === 'grades' && <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} fullWidth />}
+          {activeSection === 'academic-history' && <AcademicHistory activities={data?.academicHistory ?? []} />}
+          {activeSection === 'health' && <MedicalRecords studentId={currentUser.id} records={data?.medicalRecords ?? []} />}
+          {activeSection === 'counseling' && <CounselingRecords sessions={data?.counselingRecords ?? []} />}
+          {activeSection === 'discipline' && <DisciplineRecords studentId={currentUser.id} records={data?.disciplineRecords ?? []} />}
+          {activeSection === 'organizations' && <StudentOrganizations organizations={data?.organizations ?? []} />}
+          {activeSection === 'documents' && <StudentDocuments documents={data?.documents ?? []} />}
         </div>
       </main>
     </div>

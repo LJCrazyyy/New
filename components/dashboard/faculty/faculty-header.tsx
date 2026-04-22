@@ -1,12 +1,18 @@
-import { Bell, Search, LogOut } from 'lucide-react'
+'use client'
+
+import { Search, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NotificationBell } from '@/components/dashboard/notification-bell'
+import type { UserData } from '@/components/login-page'
 
 interface FacultyHeaderProps {
   onLogout?: () => void
+  currentUser: UserData
+  onNavigateSection?: (section: string) => void
 }
 
-export function FacultyHeader({ onLogout }: FacultyHeaderProps) {
+export function FacultyHeader({ onLogout, currentUser, onNavigateSection }: FacultyHeaderProps) {
   return (
     <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-10">
       <div className="flex items-center justify-between p-4 md:p-6">
@@ -21,9 +27,7 @@ export function FacultyHeader({ onLogout }: FacultyHeaderProps) {
         </div>
 
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-white">
-            <Bell className="h-5 w-5" />
-          </Button>
+          <NotificationBell currentUser={currentUser} onNavigateSection={onNavigateSection} />
           <Button 
             variant="ghost" 
             size="sm" 
