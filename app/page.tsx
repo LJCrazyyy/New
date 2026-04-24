@@ -7,6 +7,8 @@ import { StudentDashboard } from '@/components/dashboard/student-dashboard'
 import { FacultyDashboard } from '@/components/dashboard/faculty-dashboard'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ?? ''
+
 type AppState = 'role-select' | 'login' | 'dashboard'
 type UserRole = 'student' | 'faculty' | 'admin'
 const SESSION_STORAGE_KEY = 'campus.currentUser'
@@ -34,6 +36,32 @@ export default function Page() {
     } catch {
       localStorage.removeItem(SESSION_STORAGE_KEY)
     }
+  }, [])
+
+  useEffect(() => {
+    if (!API_BASE_URL || typeof window === 'undefined') {
+      return
+    }
+
+    const originalFetch = window.fetch.bind(window)
+    if ((window as any).__apiBaseUrlPatched) {
+      return
+    }
+
+    window.fetch = async (input: RequestInfo, init?: RequestInit) => {
+      if (typeof input === 'string' && input.startsWith('/api/')) {
+        input = `${API_BASE_URL}${input}`
+      } else if (input instanceof Request) {
+        const url = new URL(input.url)
+        if (url.pathname.startsWith('/api/')) {
+          const targetUrl = `${API_BASE_URL}${url.pathname}${url.search}`
+          input = new Request(targetUrl, input)
+        }
+      }
+      return originalFetch(input, init)
+    }
+
+    ;(window as any).__apiBaseUrlPatched = true
   }, [])
 
   const handleRoleSelect = (role: UserRole) => {
