@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { AlertTriangle, CheckCircle2, Clock, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { fetchAllPages } from '@/lib/utils'
 
 type UserOption = {
   id: string
@@ -120,32 +121,29 @@ export function DisciplineRecordManagement() {
     setError('')
 
     try {
-      const [recordsResponse, studentsResponse] = await Promise.all([
+      const [recordsResponse, students] = await Promise.all([
         fetch('/api/discipline-records?populate=student&limit=200&sort=incidentDate&order=desc'),
-        fetch('/api/users?role=student&limit=500&sort=name&order=asc'),
+        fetchAllPages<{ id: string; name: string; systemId: string }>((page) =>
+          `/api/users?role=student&limit=100&page=${page}&sort=name&order=asc`
+        ),
       ])
 
       const recordsPayload = await recordsResponse.json()
-      const studentsPayload = await studentsResponse.json()
 
       if (!recordsResponse.ok || !recordsPayload.success) {
         throw new Error(recordsPayload.message || 'Unable to load discipline records.')
       }
 
-      if (!studentsResponse.ok || !studentsPayload.success) {
-        throw new Error(studentsPayload.message || 'Unable to load students list.')
-      }
-
       setRecords(Array.isArray(recordsPayload.data) ? recordsPayload.data : [])
       setStudents(
-        (Array.isArray(studentsPayload.data) ? studentsPayload.data : []).map((student) => ({
+        students.map((student) => ({
           id: student.id,
           name: student.name,
           systemId: student.systemId,
         }))
       )
 
-      const selectedStudent = (Array.isArray(studentsPayload.data) ? studentsPayload.data : []).find((student) => student.id === form.student)
+      const selectedStudent = students.find((student) => student.id === form.student)
       if (selectedStudent) {
         setCreateStudentQuery(`${selectedStudent.name} (${selectedStudent.systemId})`)
       }

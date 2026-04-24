@@ -32,12 +32,16 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
   const [error, setError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [createStudentQuery, setCreateStudentQuery] = useState('')
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('condition')
   const [status, setStatus] = useState('active')
   const [recordedAt, setRecordedAt] = useState(new Date().toISOString().slice(0, 10))
   const [notes, setNotes] = useState('')
   const [students, setStudents] = useState<Array<{ id: string; name: string; systemId: string }>>([])
+
+  const formatStudentLabel = (student: { id: string; name: string; systemId: string }) =>
+    `${student.name} (${student.systemId})`
 
   const loadRecords = async () => {
     setIsLoading(true)
@@ -63,6 +67,15 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
     loadRecords()
   }, [])
 
+  const createStudentSuggestions = useMemo(() => {
+    const term = createStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : students
+
+    return source.slice(0, 8)
+  }, [createStudentQuery, students])
+
   useEffect(() => {
     let mounted = true
 
@@ -81,6 +94,7 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
         if (mounted) {
           setStudents(mappedStudents)
           setSelectedStudentId(mappedStudents[0]?.id ?? '')
+          setCreateStudentQuery(mappedStudents[0] ? formatStudentLabel(mappedStudents[0]) : '')
         }
       } catch {
         if (mounted) {
@@ -182,17 +196,32 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
-          <select
-            value={selectedStudentId}
-            onChange={(event) => setSelectedStudentId(event.target.value)}
-            className="md:col-span-2 h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
-          >
-            {students.map((student) => (
-              <option key={student.id} value={student.id}>
-                {student.name} ({student.systemId})
-              </option>
-            ))}
-          </select>
+          <div className="relative md:col-span-2">
+            <Input
+              value={createStudentQuery}
+              onChange={(event) => {
+                setCreateStudentQuery(event.target.value)
+                setSelectedStudentId('')
+              }}
+              placeholder="Search student by name or ID"
+              className="h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white placeholder-gray-500"
+            />
+            <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+              {createStudentSuggestions.map((student) => (
+                <button
+                  key={student.id}
+                  type="button"
+                  className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
+                  onClick={() => {
+                    setSelectedStudentId(student.id)
+                    setCreateStudentQuery(formatStudentLabel(student))
+                  }}
+                >
+                  {formatStudentLabel(student)}
+                </button>
+              ))}
+            </div>
+          </div>
           <Input
             value={title}
             onChange={(event) => setTitle(event.target.value)}

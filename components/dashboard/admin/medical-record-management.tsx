@@ -67,7 +67,11 @@ export function MedicalRecordManagement() {
   const [form, setForm] = useState<MedicalFormState>(initialForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<MedicalFormState>(initialEditForm)
+  const [createStudentQuery, setCreateStudentQuery] = useState('')
+  const [editStudentQuery, setEditStudentQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+
+  const formatStudentLabel = (student: UserOption) => `${student.name} (${student.systemId})`
 
   const loadData = async () => {
     setIsLoading(true)
@@ -99,6 +103,24 @@ export function MedicalRecordManagement() {
   useEffect(() => {
     loadData()
   }, [])
+
+  const createStudentSuggestions = useMemo(() => {
+    const term = createStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : students
+
+    return source.slice(0, 8)
+  }, [createStudentQuery, students])
+
+  const editStudentSuggestions = useMemo(() => {
+    const term = editStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : students
+
+    return source.slice(0, 8)
+  }, [editStudentQuery, students])
 
   const filteredRecords = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -199,11 +221,13 @@ export function MedicalRecordManagement() {
       status: record.status ?? 'active',
       recordedAt: record.recordedAt ? record.recordedAt.slice(0, 10) : '',
     })
+    setEditStudentQuery(record.student ? `${record.student.name} (${record.student.systemId})` : '')
   }
 
   const onCancelEdit = () => {
     setEditingId(null)
     setEditForm(initialEditForm)
+    setEditStudentQuery('')
   }
 
   const onSaveEdit = async () => {
@@ -261,18 +285,32 @@ export function MedicalRecordManagement() {
         </CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-2" onSubmit={onCreateRecord}>
-            <select
-              className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white"
-              value={form.student}
-              onChange={(event) => setForm((prev) => ({ ...prev, student: event.target.value }))}
-            >
-              <option value="">Select Student</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name} ({student.systemId})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <Input
+                value={createStudentQuery}
+                onChange={(event) => {
+                  setCreateStudentQuery(event.target.value)
+                  setForm((prev) => ({ ...prev, student: '' }))
+                }}
+                placeholder="Search student by name or ID"
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+              />
+              <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                {createStudentSuggestions.map((student) => (
+                  <button
+                    key={student.id}
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
+                    onClick={() => {
+                      setForm((prev) => ({ ...prev, student: student.id }))
+                      setCreateStudentQuery(formatStudentLabel(student))
+                    }}
+                  >
+                    {formatStudentLabel(student)}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <Input
               value={form.title}
@@ -375,18 +413,32 @@ export function MedicalRecordManagement() {
                   <div className="flex-1">
                     {editingId === record.id ? (
                       <div className="grid gap-2 md:grid-cols-2">
-                        <select
-                          className="h-9 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
-                          value={editForm.student}
-                          onChange={(event) => setEditForm((prev) => ({ ...prev, student: event.target.value }))}
-                        >
-                          <option value="">Select Student</option>
-                          {students.map((student) => (
-                            <option key={student.id} value={student.id}>
-                              {student.name} ({student.systemId})
-                            </option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <Input
+                            value={editStudentQuery}
+                            onChange={(event) => {
+                              setEditStudentQuery(event.target.value)
+                              setEditForm((prev) => ({ ...prev, student: '' }))
+                            }}
+                            placeholder="Search student by name or ID"
+                            className="h-9 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+                          />
+                          <div className="absolute z-10 mt-1 max-h-36 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                            {editStudentSuggestions.map((student) => (
+                              <button
+                                key={student.id}
+                                type="button"
+                                className="w-full px-2 py-1.5 text-left text-xs text-gray-200 hover:bg-gray-800"
+                                onClick={() => {
+                                  setEditForm((prev) => ({ ...prev, student: student.id }))
+                                  setEditStudentQuery(formatStudentLabel(student))
+                                }}
+                              >
+                                {formatStudentLabel(student)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <Input
                           value={editForm.title}
                           onChange={(event) => setEditForm((prev) => ({ ...prev, title: event.target.value }))}
