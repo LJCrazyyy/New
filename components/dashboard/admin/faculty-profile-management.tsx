@@ -8,16 +8,18 @@ import { Badge } from '@/components/ui/badge'
 import { Edit, Plus, Save, Trash2, X } from 'lucide-react'
 
 type FacultyProfileRecord = {
-  id: string
+  id?: string
   employeeNumber: string
   department: string
   title: string
   office: string
-  user?: {
-    id?: string
-    name?: string
-    systemId?: string
+  hasProfile: boolean
+  user: {
+    id: string
+    systemId: string
+    name: string
     email?: string
+    status?: string
   }
   coursesAssigned?: Array<{
     code: string
@@ -27,6 +29,7 @@ type FacultyProfileRecord = {
 }
 
 type FacultyProfileForm = {
+  userId: string
   employeeNumber: string
   department: string
   title: string
@@ -34,6 +37,7 @@ type FacultyProfileForm = {
 }
 
 const initialForm: FacultyProfileForm = {
+  userId: '',
   employeeNumber: '',
   department: '',
   title: '',
@@ -59,14 +63,53 @@ export function FacultyProfileManagement() {
     setError('')
 
     try {
-      const response = await fetch('/api/faculty-profiles?limit=500&sort=-createdAt&populate=user,coursesAssigned')
-      const payload = await response.json()
+      const [profilesResponse, facultyResponse] = await Promise.all([
+        fetch('/api/faculty-profiles?limit=500&sort=-createdAt&populate=user,coursesAssigned'),
+        fetch('/api/users?role=faculty&limit=500&sort=name&order=asc'),
+      ])
 
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message || 'Failed to load faculty profiles.')
+      const profilesPayload = await profilesResponse.json()
+      const facultyPayload = await facultyResponse.json()
+
+      if (!profilesResponse.ok || !profilesPayload.success) {
+        throw new Error(profilesPayload.message || 'Failed to load faculty profiles.')
       }
 
-      setProfiles(Array.isArray(payload.data) ? payload.data : [])
+      if (!facultyResponse.ok || !facultyPayload.success) {
+        throw new Error(facultyPayload.message || 'Failed to load faculty users.')
+      }
+
+      const facultyUsersData = Array.isArray(facultyPayload.data) ? (facultyPayload.data as any[]) : []
+      const facultyProfilesData = Array.isArray(profilesPayload.data) ? (profilesPayload.data as any[]) : []
+      const profileMap = new Map<string, any>()
+
+      facultyProfilesData.forEach((profile) => {
+        if (profile.user?.id) {
+          profileMap.set(profile.user.id, profile)
+        }
+      })
+
+      const combinedProfiles = facultyUsersData.map((faculty) => {
+        const profile = profileMap.get(faculty.id)
+        return {
+          id: profile?.id,
+          employeeNumber: profile?.employeeNumber ?? '',
+          department: profile?.department ?? '',
+          title: profile?.title ?? '',
+          office: profile?.office ?? '',
+          hasProfile: Boolean(profile),
+          user: {
+            id: faculty.id,
+            systemId: faculty.systemId,
+            name: faculty.name,
+            email: faculty.email,
+            status: faculty.status,
+          },
+          coursesAssigned: profile?.coursesAssigned ?? [],
+        }
+      })
+
+      setProfiles(combinedProfiles)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load faculty profiles.')
     } finally {
@@ -78,13 +121,24 @@ export function FacultyProfileManagement() {
     loadData()
   }, [])
 
+  const availableFacultyForCreate = useMemo(
+    () => profiles.filter((profile) => !profile.hasProfile),
+    [profiles]
+  )
+
   const filteredProfiles = useMemo(() => {
     const term = search.trim().toLowerCase()
     if (!term) return profiles
 
     return profiles.filter((profile) => {
-      return [profile.employeeNumber, profile.user?.name, profile.department, profile.title, profile.office]
-        .some((value) => String(value ?? '').toLowerCase().includes(term))
+      return [
+        profile.user.name,
+        profile.user.systemId,
+        profile.employeeNumber,
+        profile.department,
+        profile.title,
+        profile.office,
+      ].some((value) => String(value ?? '').toLowerCase().includes(term))
     })
   }, [profiles, search])
 
@@ -92,7 +146,7 @@ export function FacultyProfileManagement() {
     event.preventDefault()
     setError('')
 
-    if (!createForm.employeeNumber || !createForm.department || !createForm.title || !createForm.office) {
+    if (!createForm.userId || !createForm.employeeNumber || !createForm.department || !createForm.title || !createForm.office) {
       setError('Please complete all required fields.')
       return
     }
@@ -103,7 +157,13 @@ export function FacultyProfileManagement() {
       const response = await fetch('/api/faculty-profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(createForm),
+        body: JSON.stringify({
+          user: createForm.userId,
+          employeeNumber: createForm.employeeNumber,
+          department: createForm.department,
+          title: createForm.title,
+          office: createForm.office,
+        }),
       })
 
       const payload = await response.json()
@@ -197,6 +257,22 @@ export function FacultyProfileManagement() {
       <CardContent className="space-y-4">
         {showCreate && (
           <form className="grid gap-3 md:grid-cols-4 rounded-lg border border-gray-700 bg-gray-800/40 p-4" onSubmit={onCreateProfile}>
+            <select
+              value={createForm.userId}
+              onChange={(e) => setCreateForm((p) => ({ ...p, userId: e.target.value }))}
+              className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white"
+            >
+              <option value="">Select Faculty User</option>
+              {availableFacultyForCreate.length > 0 ? (
+                availableFacultyForCreate.map((faculty) => (
+                  <option key={faculty.user.id} value={faculty.user.id}>
+                    {faculty.user.systemId} - {faculty.user.name}
+                  </option>
+                ))
+              ) : (
+                <option value="">No faculty users without profile</option>
+              )}
+            </select>
             <Input value={createForm.employeeNumber} onChange={(e) => setCreateForm((p) => ({ ...p, employeeNumber: e.target.value }))} placeholder="Employee Number" className="bg-gray-800 border-gray-700 text-white" />
             <select value={createForm.department} onChange={(e) => setCreateForm((p) => ({ ...p, department: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
               <option value="">Select Department</option>
@@ -212,7 +288,9 @@ export function FacultyProfileManagement() {
             </select>
             <Input value={createForm.office} onChange={(e) => setCreateForm((p) => ({ ...p, office: e.target.value }))} placeholder="Office Location" className="bg-gray-800 border-gray-700 text-white" />
             <div className="md:col-span-4 flex justify-end">
-              <Button type="submit" disabled={isSaving} className="bg-green-600 hover:bg-green-700">{isSaving ? 'Saving...' : 'Create Profile'}</Button>
+              <Button type="submit" disabled={isSaving || availableFacultyForCreate.length === 0} className="bg-green-600 hover:bg-green-700">
+                {isSaving ? 'Saving...' : 'Create Profile'}
+              </Button>
             </div>
           </form>
         )}
@@ -244,9 +322,9 @@ export function FacultyProfileManagement() {
             </thead>
             <tbody>
               {filteredProfiles.map((profile) => (
-                <tr key={profile.id} className="border-b border-gray-800 hover:bg-gray-800/50">
-                  <td className="py-3 px-4 text-white font-medium">{profile.employeeNumber}</td>
-                  <td className="py-3 px-4 text-gray-300">{profile.user?.name ?? 'Unknown'}</td>
+                <tr key={profile.user.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                  <td className="py-3 px-4 text-white font-medium">{profile.hasProfile ? profile.employeeNumber : '-'}</td>
+                  <td className="py-3 px-4 text-gray-300">{profile.user.name}</td>
                   {editingId === profile.id ? (
                     <>
                       <td className="py-3 px-4">
@@ -269,9 +347,9 @@ export function FacultyProfileManagement() {
                     </>
                   ) : (
                     <>
-                      <td className="py-3 px-4 text-gray-300">{profile.department}</td>
-                      <td className="py-3 px-4 text-gray-300">{profile.title}</td>
-                      <td className="py-3 px-4 text-gray-300">{profile.office}</td>
+                      <td className="py-3 px-4 text-gray-300">{profile.department || '-'}</td>
+                      <td className="py-3 px-4 text-gray-300">{profile.title || '-'}</td>
+                      <td className="py-3 px-4 text-gray-300">{profile.office || '-'}</td>
                     </>
                   )}
                   <td className="py-3 px-4">
@@ -294,10 +372,26 @@ export function FacultyProfileManagement() {
                         <Button size="sm" className="bg-blue-600 hover:bg-blue-700" onClick={onSaveEdit}><Save className="h-4 w-4" /></Button>
                         <Button size="sm" variant="outline" className="border-gray-600" onClick={onCancelEdit}><X className="h-4 w-4" /></Button>
                       </div>
-                    ) : (
+                    ) : profile.hasProfile ? (
                       <div className="flex justify-center gap-2">
                         <Button size="sm" variant="outline" className="border-blue-600 text-blue-400 hover:text-blue-300" onClick={() => onStartEdit(profile)}><Edit className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:text-red-300" onClick={() => onDeleteProfile(profile.id)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:text-red-300" onClick={() => onDeleteProfile(profile.id ?? '')}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    ) : (
+                      <div className="flex justify-center">
+                        <Button
+                          size="sm"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            setShowCreate(true)
+                            setCreateForm((prev) => ({
+                              ...prev,
+                              userId: profile.user.id,
+                            }))
+                          }}
+                        >
+                          Create Profile
+                        </Button>
                       </div>
                     )}
                   </td>

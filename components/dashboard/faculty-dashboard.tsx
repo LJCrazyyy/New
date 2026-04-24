@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { FacultyHeader } from './faculty/faculty-header'
 import { FacultySidebar } from './faculty/faculty-sidebar'
 import { FacultyProfile } from './faculty/faculty-profile'
@@ -84,10 +85,44 @@ type FacultyDashboardData = {
 }
 
 export function FacultyDashboard({ currentUser, onLogout }: FacultyDashboardProps) {
-  const [activeSection, setActiveSection] = useState('overview')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const validSections = useMemo(
+    () => [
+      'overview',
+      'courses',
+      'activities',
+      'grades',
+      'roster',
+      'performance',
+      'attendance',
+      'guidance-records',
+      'counseling-records',
+      'medical-records',
+    ],
+    []
+  )
+
+  const querySection = searchParams.get('section')?.trim().toLowerCase() ?? ''
+  const initialSection = validSections.includes(querySection) ? querySection : 'overview'
+
+  const [activeSection, setActiveSection] = useState(initialSection)
   const [data, setData] = useState<FacultyDashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  const updateSection = (section: string) => {
+    if (section === activeSection) {
+      return
+    }
+
+    setActiveSection(section)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('section', section)
+    router.push(`${pathname}?${params.toString()}`)
+  }
 
   const loadFacultyData = async () => {
     setIsLoading(true)
@@ -113,11 +148,19 @@ export function FacultyDashboard({ currentUser, onLogout }: FacultyDashboardProp
     loadFacultyData()
   }, [currentUser.id])
 
+  useEffect(() => {
+    if (querySection && validSections.includes(querySection) && querySection !== activeSection) {
+      setActiveSection(querySection)
+    } else if (!querySection && activeSection !== 'overview') {
+      setActiveSection('overview')
+    }
+  }, [querySection, activeSection, validSections])
+
   return (
     <div className="min-h-screen bg-background">
       <FacultySidebar
         activeSection={activeSection}
-        onSectionChange={setActiveSection}
+        onSectionChange={updateSection}
         facultyName={data?.faculty?.name}
         department={data?.profile?.department}
       />
@@ -126,7 +169,7 @@ export function FacultyDashboard({ currentUser, onLogout }: FacultyDashboardProp
         <FacultyHeader
           onLogout={onLogout}
           currentUser={currentUser}
-          onNavigateSection={setActiveSection}
+          onNavigateSection={updateSection}
         />
         
         <div className="p-4 md:p-8 space-y-6">

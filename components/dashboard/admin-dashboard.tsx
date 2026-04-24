@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { AdminHeader } from './admin/admin-header'
 import { AdminSidebar } from './admin/admin-sidebar'
 import { AdminOverview } from './admin/admin-overview'
@@ -28,18 +29,67 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
-  const [activeSection, setActiveSection] = useState('overview')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const validSections = useMemo(
+    () => [
+      'overview',
+      'users',
+      'student-profiles',
+      'faculty-profiles',
+      'courses',
+      'enrollment',
+      'documents',
+      'organizations',
+      'academic-history',
+      'attendance',
+      'grade-scales',
+      'course-prerequisites',
+      'medical-records',
+      'discipline-records',
+      'audit-logs',
+      'reports',
+      'settings',
+    ],
+    []
+  )
+
+  const querySection = searchParams.get('section')?.trim().toLowerCase() ?? ''
+  const initialSection = validSections.includes(querySection) ? querySection : 'overview'
+
+  const [activeSection, setActiveSection] = useState(initialSection)
+
+  const updateSection = (section: string) => {
+    if (section === activeSection) {
+      return
+    }
+
+    setActiveSection(section)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('section', section)
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  useEffect(() => {
+    if (querySection && validSections.includes(querySection) && querySection !== activeSection) {
+      setActiveSection(querySection)
+    } else if (!querySection && activeSection !== 'overview') {
+      setActiveSection('overview')
+    }
+  }, [querySection, activeSection, validSections])
 
   return (
     <div className="min-h-screen bg-background">
-      <AdminSidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <AdminSidebar activeSection={activeSection} onSectionChange={updateSection} />
       
       <main className="md:ml-64">
       
         <AdminHeader
           onLogout={onLogout}
           currentUser={currentUser}
-          onNavigateSection={setActiveSection}
+          onNavigateSection={updateSection}
         />
         
         <div className="p-4 md:p-8 space-y-6">

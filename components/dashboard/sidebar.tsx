@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -12,7 +13,6 @@ import {
   FileCheck,
   History
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 interface SidebarProps {
   activeSection: string
@@ -52,21 +52,19 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
           const isActive = activeSection === section.id
 
           return (
-            <button
+            <Link
               key={section.id}
+              href={`/?section=${encodeURIComponent(section.id)}`}
               className={`w-full flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-cyan-900/50 text-cyan-200 border border-cyan-700'
                   : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
-              onClick={() => {
-                console.log('[v0] Clicking section:', section.id)
-                onSectionChange(section.id)
-              }}
+              onClick={() => onSectionChange(section.id)}
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">{section.label}</span>
-            </button>
+            </Link>
           )
         })}
       </nav>

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import {
   LayoutDashboard,
   BookOpen,
@@ -45,8 +46,9 @@ export function FacultySidebar({ activeSection, onSectionChange, facultyName, de
           const isActive = activeSection === section.id
 
           return (
-            <button
+            <Link
               key={section.id}
+              href={`/?section=${encodeURIComponent(section.id)}`}
               className={`w-full flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive
                   ? 'bg-purple-900/50 text-purple-200 border border-purple-700'
@@ -56,7 +58,7 @@ export function FacultySidebar({ activeSection, onSectionChange, facultyName, de
             >
               <Icon className="h-4 w-4 flex-shrink-0" />
               <span className="truncate">{section.label}</span>
-            </button>
+            </Link>
           )
         })}
       </nav>

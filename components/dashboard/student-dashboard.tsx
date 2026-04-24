@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import { StudentHeader } from './student-header'
 import { StudentProfile } from './student-profile'
 import { AcademicProgress } from './academic-progress'
@@ -118,12 +119,50 @@ type StudentDashboardData = {
 }
 
 export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProps) {
-  const [activeSection, setActiveSection] = useState('overview')
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const validSections = useMemo(
+    () => [
+      'overview',
+      'courses',
+      'grades',
+      'academic-history',
+      'health',
+      'counseling',
+      'discipline',
+      'organizations',
+      'documents',
+    ],
+    []
+  )
+
+  const querySection = searchParams.get('section')?.trim().toLowerCase() ?? ''
+  const initialSection = validSections.includes(querySection) ? querySection : 'overview'
+
+  const [activeSection, setActiveSection] = useState(initialSection)
   const [data, setData] = useState<StudentDashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
 
+  const updateSection = (section: string) => {
+    if (section === activeSection) {
+      return
+    }
+
+    setActiveSection(section)
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('section', section)
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
   useEffect(() => {
+    if (querySection && validSections.includes(querySection) && querySection !== activeSection) {
+      setActiveSection(querySection)
+    } else if (!querySection && activeSection !== 'overview') {
+      setActiveSection('overview')
+    }
     let mounted = true
 
     async function loadDashboardData() {
@@ -161,13 +200,13 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
 
   return (
     <div className="dark min-h-screen bg-gray-950 text-white">
-      <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
+      <Sidebar activeSection={activeSection} onSectionChange={updateSection} />
       
       <main className="md:ml-64">
         <StudentHeader
           onLogout={onLogout}
           currentUser={currentUser}
-          onNavigateSection={setActiveSection}
+          onNavigateSection={updateSection}
         />
         
         <div className="p-4 md:p-8 space-y-6">
