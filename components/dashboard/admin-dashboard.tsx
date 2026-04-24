@@ -12,6 +12,14 @@ import { SystemSettings } from './admin/system-settings'
 import { AdminReports } from './admin/admin-reports'
 import { MedicalRecordManagement } from './admin/medical-record-management'
 import { DisciplineRecordManagement } from './admin/discipline-record-management'
+import { StudentProfileManagement } from './admin/student-profile-management'
+import { FacultyProfileManagement } from './admin/faculty-profile-management'
+import { StudentDocumentManagement } from './admin/student-document-management'
+import { StudentOrganizationManagement } from './admin/student-organization-management'
+import { AcademicHistoryManagement } from './admin/academic-history-management'
+import { AttendanceManagement } from './admin/attendance-management'
+import { GradeScaleManagement } from './admin/grade-scale-management'
+import { CoursePrerequisiteManagement } from './admin/course-prerequisite-management'
 import type { UserData } from '@/components/login-page'
 
 interface AdminDashboardProps {
@@ -37,8 +45,16 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
         <div className="p-4 md:p-8 space-y-6">
           {activeSection === 'overview' && <AdminOverview />}
           {activeSection === 'users' && <UserManagement />}
+          {activeSection === 'student-profiles' && <StudentProfileManagement />}
+          {activeSection === 'faculty-profiles' && <FacultyProfileManagement />}
           {activeSection === 'courses' && <CourseAdminManagement />}
           {activeSection === 'enrollment' && <EnrollmentManagement />}
+          {activeSection === 'documents' && <StudentDocumentManagement />}
+          {activeSection === 'organizations' && <StudentOrganizationManagement />}
+          {activeSection === 'academic-history' && <AcademicHistoryManagement />}
+          {activeSection === 'attendance' && <AttendanceManagement />}
+          {activeSection === 'grade-scales' && <GradeScaleManagement />}
+          {activeSection === 'course-prerequisites' && <CoursePrerequisiteManagement />}
           {activeSection === 'medical-records' && <MedicalRecordManagement />}
           {activeSection === 'discipline-records' && <DisciplineRecordManagement />}
           {activeSection === 'audit-logs' && <AuditLogs />}

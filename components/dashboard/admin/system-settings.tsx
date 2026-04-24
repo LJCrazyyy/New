@@ -23,7 +23,7 @@ const defaultSettings: Array<{ key: string; value: unknown; description: string 
   { key: 'currentSemester', value: 'Fall 2026', description: 'Active semester for the campus system' },
   { key: 'academicYear', value: '2026-2027', description: 'Current academic year' },
   { key: 'registrationStatus', value: 'open', description: 'Course registration availability' },
-  { key: 'maxUnitsPerSemester', value: 24, description: 'Maximum units allowed per student per semester' },
+  { key: 'maxUnitsPerSemester', value: 21, description: 'Maximum units allowed per student per semester' },
   { key: 'gradePassingThreshold', value: 75, description: 'Minimum average required to pass a course' },
   { key: 'attendanceMinimumPercent', value: 75, description: 'Minimum attendance percentage required per course' },
   { key: 'passwordResetEnabled', value: true, description: 'Allows admin-triggered account password resets' },

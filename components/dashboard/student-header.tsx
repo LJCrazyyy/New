@@ -19,11 +19,11 @@ export function StudentHeader({ onLogout, currentUser, onNavigateSection }: Stud
   }
 
   return (
-    <header className="border-b border-border bg-card sticky top-0 z-10">
+    <header className="bg-gray-900 border-b border-gray-800 sticky top-0 z-10">
       <div className="flex items-center justify-between p-4 md:p-8">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Student Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">Welcome back! Here's your academic overview.</p>
+          <h1 className="text-2xl font-bold text-white">Student Dashboard</h1>
+          <p className="text-sm text-gray-400 mt-1">Welcome back! Here is your academic overview.</p>
         </div>
         
         <div className="flex items-center gap-3">
@@ -33,7 +33,7 @@ export function StudentHeader({ onLogout, currentUser, onNavigateSection }: Stud
             size="icon"
             onClick={handleLogoutClick}
             title="Logout"
-            className="cursor-pointer"
+            className="cursor-pointer text-gray-400 hover:text-white"
           >
             <LogOut className="h-5 w-5" />
           </Button>

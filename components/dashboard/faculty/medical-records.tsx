@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { HeartPulse } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { fetchAllPages } from '@/lib/utils'
 
 type MedicalRecord = {
   id: string
@@ -19,47 +21,140 @@ type MedicalRecord = {
   }
 }
 
-export function MedicalRecordsFaculty() {
+type MedicalRecordsFacultyProps = {
+  facultyId: string
+}
+
+export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps) {
   const [records, setRecords] = useState<MedicalRecord[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [error, setError] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [title, setTitle] = useState('')
+  const [category, setCategory] = useState('condition')
+  const [status, setStatus] = useState('active')
+  const [recordedAt, setRecordedAt] = useState(new Date().toISOString().slice(0, 10))
+  const [notes, setNotes] = useState('')
+  const [students, setStudents] = useState<Array<{ id: string; name: string; systemId: string }>>([])
+
+  const loadRecords = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/medical-records?populate=student&limit=200&sort=recordedAt&order=desc')
+      const payload = await response.json()
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Failed to load medical records.')
+      }
+
+      setRecords(Array.isArray(payload.data) ? payload.data : [])
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Unable to load medical records.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadRecords()
+  }, [])
 
   useEffect(() => {
     let mounted = true
 
-    async function loadRecords() {
-      setIsLoading(true)
-      setError('')
-
+    async function loadStudents() {
       try {
-        const response = await fetch('/api/medical-records?populate=student&limit=200&sort=recordedAt&order=desc')
-        const payload = await response.json()
+        const mappedStudents = await fetchAllPages<{ id: string; name: string; systemId: string }>((page) =>
+          `/api/users?role=student&limit=100&page=${page}&sort=name&order=asc`
+        ).then((data) =>
+          data.map((student) => ({
+            id: student.id,
+            name: student.name,
+            systemId: student.systemId,
+          }))
+        )
 
-        if (!response.ok || !payload.success) {
-          throw new Error(payload.message || 'Failed to load medical records.')
-        }
-
         if (mounted) {
-          setRecords(Array.isArray(payload.data) ? payload.data : [])
+          setStudents(mappedStudents)
+          setSelectedStudentId(mappedStudents[0]?.id ?? '')
         }
-      } catch (loadError) {
+      } catch {
         if (mounted) {
-          setError(loadError instanceof Error ? loadError.message : 'Unable to load medical records.')
-        }
-      } finally {
-        if (mounted) {
-          setIsLoading(false)
+          setStudents([])
         }
       }
     }
 
-    loadRecords()
+    loadStudents()
 
     return () => {
       mounted = false
     }
   }, [])
+
+  const createRecord = async () => {
+    if (!selectedStudentId || !title.trim() || !notes.trim()) {
+      setError('Student, title, and notes are required.')
+      return
+    }
+
+    setIsSaving(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/medical-records', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student: selectedStudentId,
+          title: title.trim(),
+          category,
+          status,
+          notes: notes.trim(),
+          recordedAt,
+          createdBy: facultyId,
+        }),
+      })
+
+      const payload = await response.json()
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Failed to create medical record.')
+      }
+
+      setTitle('')
+      setNotes('')
+      setRecordedAt(new Date().toISOString().slice(0, 10))
+      await loadRecords()
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Unable to create medical record.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const deleteRecord = async (id: string) => {
+    const confirmed = window.confirm('Delete this medical record?')
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/medical-records/${id}`, { method: 'DELETE' })
+      const payload = await response.json()
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Failed to delete medical record.')
+      }
+
+      setRecords((previous) => previous.filter((record) => record.id !== id))
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : 'Unable to delete medical record.')
+    }
+  }
 
   const filteredRecords = useMemo(() => {
     const term = search.trim().toLowerCase()
@@ -86,6 +181,64 @@ export function MedicalRecordsFaculty() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+          <select
+            value={selectedStudentId}
+            onChange={(event) => setSelectedStudentId(event.target.value)}
+            className="md:col-span-2 h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
+          >
+            {students.map((student) => (
+              <option key={student.id} value={student.id}>
+                {student.name} ({student.systemId})
+              </option>
+            ))}
+          </select>
+          <Input
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+            placeholder="Record title"
+            className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+          />
+          <select
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            className="h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
+          >
+            <option value="allergy">allergy</option>
+            <option value="condition">condition</option>
+            <option value="medication">medication</option>
+            <option value="consultation">consultation</option>
+            <option value="other">other</option>
+          </select>
+          <select
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            className="h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
+          >
+            <option value="active">active</option>
+            <option value="monitoring">monitoring</option>
+            <option value="resolved">resolved</option>
+          </select>
+          <Input
+            type="date"
+            value={recordedAt}
+            onChange={(event) => setRecordedAt(event.target.value)}
+            className="bg-gray-800 border-gray-700 text-white"
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Input
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder="Medical notes"
+            className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+          />
+          <Button className="bg-rose-600 hover:bg-rose-700 text-white" onClick={createRecord} disabled={isSaving || isLoading}>
+            {isSaving ? 'Saving...' : 'Add Record'}
+          </Button>
+        </div>
+
         <Input
           value={search}
           onChange={(event) => setSearch(event.target.value)}
@@ -119,7 +272,12 @@ export function MedicalRecordsFaculty() {
                 Recorded: <span className="text-gray-200">{new Date(record.recordedAt).toLocaleDateString()}</span>
               </p>
 
-              <p className="mt-3 border-t border-gray-700 pt-3 text-sm text-gray-200">{record.notes}</p>
+              <div className="mt-3 border-t border-gray-700 pt-3 flex items-center justify-between gap-2">
+                <p className="text-sm text-gray-200">{record.notes}</p>
+                <Button size="sm" variant="ghost" className="text-red-400 hover:text-red-300" onClick={() => deleteRecord(record.id)}>
+                  Delete
+                </Button>
+              </div>
             </div>
           ))}
         </div>

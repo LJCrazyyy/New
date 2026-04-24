@@ -33,15 +33,15 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   ]
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-border bg-card p-4 hidden md:flex flex-col">
+    <aside className="fixed left-0 top-0 h-screen w-64 border-r border-gray-800 bg-gray-900 p-4 hidden md:flex flex-col">
       <div className="mb-8">
-        <div className="flex items-center gap-2 px-2 py-3 rounded-lg bg-primary/10">
-          <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">SD</span>
+        <div className="flex items-center gap-2 px-2 py-3 rounded-lg bg-gray-800">
+          <div className="h-8 w-8 rounded-full bg-cyan-600 flex items-center justify-center">
+            <span className="text-white font-bold text-sm">SD</span>
           </div>
           <div>
-            <p className="font-semibold text-sm text-foreground">Student Portal</p>
-            <p className="text-xs text-muted-foreground">v1.0</p>
+            <p className="font-semibold text-sm text-white">Student Portal</p>
+            <p className="text-xs text-gray-400">v1.0</p>
           </div>
         </div>
       </div>
@@ -56,8 +56,8 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
               key={section.id}
               className={`w-full flex items-center gap-3 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-foreground/70 hover:text-foreground hover:bg-muted'
+                  ? 'bg-cyan-900/50 text-cyan-200 border border-cyan-700'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
               onClick={() => {
                 console.log('[v0] Clicking section:', section.id)

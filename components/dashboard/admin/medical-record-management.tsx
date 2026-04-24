@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { HeartPulse, Pencil, Plus, Save, Trash2, X } from 'lucide-react'
+import { fetchAllPages } from '@/lib/utils'
 
 type UserOption = {
   id: string
@@ -73,30 +74,21 @@ export function MedicalRecordManagement() {
     setError('')
 
     try {
-      const [recordsResponse, studentsResponse] = await Promise.all([
+      const [recordsResponse, studentData] = await Promise.all([
         fetch('/api/medical-records?populate=student&limit=200&sort=recordedAt&order=desc'),
-        fetch('/api/users?role=student&limit=500&sort=name&order=asc'),
+        fetchAllPages<{ id: string; name: string; systemId: string }>((page) =>
+          `/api/users?role=student&limit=100&page=${page}&sort=name&order=asc`
+        ),
       ])
 
       const recordsPayload = await recordsResponse.json()
-      const studentsPayload = await studentsResponse.json()
 
       if (!recordsResponse.ok || !recordsPayload.success) {
         throw new Error(recordsPayload.message || 'Unable to load medical records.')
       }
 
-      if (!studentsResponse.ok || !studentsPayload.success) {
-        throw new Error(studentsPayload.message || 'Unable to load students list.')
-      }
-
       setRecords(Array.isArray(recordsPayload.data) ? recordsPayload.data : [])
-      setStudents(
-        (Array.isArray(studentsPayload.data) ? studentsPayload.data : []).map((student) => ({
-          id: student.id,
-          name: student.name,
-          systemId: student.systemId,
-        }))
-      )
+      setStudents(studentData.map((student) => ({ id: student.id, name: student.name, systemId: student.systemId })))
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load module data.')
     } finally {

@@ -3,6 +3,7 @@
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { BarChart3 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 interface RecentGradesProps {
   grades: Array<{
@@ -18,10 +19,19 @@ interface RecentGradesProps {
   progress?: {
     cumulativeGPA?: number
   }
+  student?: {
+    name?: string
+    systemId?: string
+  }
+  profile?: {
+    course?: string
+    section?: string
+    yearLevel?: string
+  } | null
   fullWidth?: boolean
 }
 
-export function RecentGrades({ grades, progress, fullWidth }: RecentGradesProps) {
+export function RecentGrades({ grades, progress, student, profile, fullWidth }: RecentGradesProps) {
 
   const getGradeColor = (average: number | null) => {
     if (!average) return 'text-muted-foreground'
@@ -44,11 +54,83 @@ export function RecentGrades({ grades, progress, fullWidth }: RecentGradesProps)
     }
   }
 
+  const toDisplayScore = (value: number | null) => {
+    return value == null ? '-' : String(value)
+  }
+
+  const downloadGradesPdf = async () => {
+    const [{ jsPDF }] = await Promise.all([import('jspdf')])
+    const document = new jsPDF({ unit: 'pt', format: 'a4' })
+
+    let y = 56
+    document.setFont('helvetica', 'bold')
+    document.setFontSize(16)
+    document.text('Student Grade Report', 40, y)
+
+    y += 20
+    document.setFont('helvetica', 'normal')
+    document.setFontSize(10)
+    document.text(`Generated: ${new Date().toLocaleString()}`, 40, y)
+
+    y += 18
+    document.text(`Student: ${student?.name ?? 'N/A'} (${student?.systemId ?? 'N/A'})`, 40, y)
+    y += 14
+    document.text(`Program: ${profile?.course ?? 'N/A'}`, 40, y)
+    y += 14
+    document.text(`Section / Year: ${profile?.section ?? 'N/A'} / ${profile?.yearLevel ?? 'N/A'}`, 40, y)
+    y += 14
+    document.text(`Semester GPA: ${progress?.cumulativeGPA?.toFixed(2) ?? 'N/A'}`, 40, y)
+
+    y += 24
+    document.setFont('helvetica', 'bold')
+    document.text('Code', 40, y)
+    document.text('Subject', 95, y)
+    document.text('Prelim', 315, y)
+    document.text('Midterm', 365, y)
+    document.text('Final', 425, y)
+    document.text('Avg', 475, y)
+    document.text('Remarks', 520, y)
+
+    y += 10
+    document.setLineWidth(0.7)
+    document.line(40, y, 560, y)
+
+    y += 16
+    document.setFont('helvetica', 'normal')
+
+    for (const grade of grades) {
+      if (y > 760) {
+        document.addPage()
+        y = 56
+      }
+
+      const subjectName = grade.name.length > 34 ? `${grade.name.slice(0, 31)}...` : grade.name
+
+      document.text(grade.code, 40, y)
+      document.text(subjectName, 95, y)
+      document.text(toDisplayScore(grade.prelim), 315, y)
+      document.text(toDisplayScore(grade.midterm), 365, y)
+      document.text(toDisplayScore(grade.final), 425, y)
+      document.text(toDisplayScore(grade.average), 475, y)
+      document.text(grade.remarks || '-', 520, y)
+      y += 18
+    }
+
+    const safeSystemId = student?.systemId ?? 'student'
+    const timestamp = new Date().toISOString().slice(0, 10)
+    document.save(`${safeSystemId}-grades-${timestamp}.pdf`)
+  }
+
   return (
     <Card className="p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <BarChart3 className="h-5 w-5 text-primary" />
-        <h3 className="text-lg font-bold text-foreground">Recent Grades</h3>
+      <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex items-center gap-2">
+          <BarChart3 className="h-5 w-5 text-primary" />
+          <h3 className="text-lg font-bold text-foreground">Recent Grades</h3>
+        </div>
+        <Button variant="outline" className="border-border" onClick={downloadGradesPdf}>
+          Download PDF
+        </Button>
       </div>
 
       <div className={`${fullWidth ? 'space-y-3' : 'space-y-3'}`}>

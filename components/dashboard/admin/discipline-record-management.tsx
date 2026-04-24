@@ -92,6 +92,28 @@ export function DisciplineRecordManagement() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<DisciplineFormState>(initialEditForm)
   const [currentPage, setCurrentPage] = useState(1)
+  const [createStudentQuery, setCreateStudentQuery] = useState('')
+  const [editStudentQuery, setEditStudentQuery] = useState('')
+
+  const formatStudentLabel = (student: UserOption) => `${student.name} (${student.systemId})`
+
+  const createStudentSuggestions = useMemo(() => {
+    const term = createStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : students
+
+    return source.slice(0, 8)
+  }, [students, createStudentQuery])
+
+  const editStudentSuggestions = useMemo(() => {
+    const term = editStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : students
+
+    return source.slice(0, 8)
+  }, [students, editStudentQuery])
 
   const loadData = async () => {
     setIsLoading(true)
@@ -122,6 +144,11 @@ export function DisciplineRecordManagement() {
           systemId: student.systemId,
         }))
       )
+
+      const selectedStudent = (Array.isArray(studentsPayload.data) ? studentsPayload.data : []).find((student) => student.id === form.student)
+      if (selectedStudent) {
+        setCreateStudentQuery(`${selectedStudent.name} (${selectedStudent.systemId})`)
+      }
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load module data.')
     } finally {
@@ -196,7 +223,21 @@ export function DisciplineRecordManagement() {
         throw new Error(payload.message || 'Failed to create discipline record.')
       }
 
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientRole: 'student',
+          recipientId: form.student,
+          title: 'New discipline record posted',
+          message: `A discipline entry was filed: ${form.incident}. Current status: ${form.status}.`,
+          type: 'discipline',
+          link: '/dashboard',
+        }),
+      })
+
       setForm(initialForm)
+      setCreateStudentQuery('')
       await loadData()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to create discipline record.')
@@ -240,11 +281,15 @@ export function DisciplineRecordManagement() {
       status: record.status ?? 'open',
       incidentDate: record.incidentDate ? record.incidentDate.slice(0, 10) : '',
     })
+    if (record.student?.name || record.student?.systemId) {
+      setEditStudentQuery(`${record.student?.name ?? 'Unknown'} (${record.student?.systemId ?? 'N/A'})`)
+    }
   }
 
   const onCancelEdit = () => {
     setEditingId(null)
     setEditForm(initialEditForm)
+    setEditStudentQuery('')
   }
 
   const onSaveEdit = async () => {
@@ -281,6 +326,19 @@ export function DisciplineRecordManagement() {
         throw new Error(payload.message || 'Failed to update discipline record.')
       }
 
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientRole: 'student',
+          recipientId: editForm.student,
+          title: 'Discipline record updated',
+          message: `Your discipline record update: ${editForm.incident}. New status: ${editForm.status}.`,
+          type: 'discipline',
+          link: '/dashboard',
+        }),
+      })
+
       onCancelEdit()
       await loadData()
     } catch (updateError) {
@@ -302,18 +360,32 @@ export function DisciplineRecordManagement() {
         </CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-2" onSubmit={onCreateRecord}>
-            <select
-              className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white"
-              value={form.student}
-              onChange={(event) => setForm((prev) => ({ ...prev, student: event.target.value }))}
-            >
-              <option value="">Select Student</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name} ({student.systemId})
-                </option>
-              ))}
-            </select>
+            <div className="space-y-2">
+              <Input
+                value={createStudentQuery}
+                onChange={(event) => {
+                  setCreateStudentQuery(event.target.value)
+                  setForm((prev) => ({ ...prev, student: '' }))
+                }}
+                placeholder="Search student by name or ID"
+                className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
+              />
+              <div className="max-h-40 overflow-y-auto rounded-md border border-gray-700 bg-gray-900/80">
+                {createStudentSuggestions.map((student) => (
+                  <button
+                    key={student.id}
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-sm text-gray-200 hover:bg-gray-800"
+                    onClick={() => {
+                      setForm((prev) => ({ ...prev, student: student.id }))
+                      setCreateStudentQuery(formatStudentLabel(student))
+                    }}
+                  >
+                    {formatStudentLabel(student)}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <Input
               value={form.incident}
@@ -420,18 +492,32 @@ export function DisciplineRecordManagement() {
                   <div className="flex-1">
                     {editingId === record.id ? (
                       <div className="grid gap-2 md:grid-cols-2">
-                        <select
-                          className="h-9 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
-                          value={editForm.student}
-                          onChange={(event) => setEditForm((prev) => ({ ...prev, student: event.target.value }))}
-                        >
-                          <option value="">Select Student</option>
-                          {students.map((student) => (
-                            <option key={student.id} value={student.id}>
-                              {student.name} ({student.systemId})
-                            </option>
-                          ))}
-                        </select>
+                        <div className="space-y-2">
+                          <Input
+                            value={editStudentQuery}
+                            onChange={(event) => {
+                              setEditStudentQuery(event.target.value)
+                              setEditForm((prev) => ({ ...prev, student: '' }))
+                            }}
+                            placeholder="Search student by name or ID"
+                            className="h-9 bg-gray-800 border-gray-700 text-white"
+                          />
+                          <div className="max-h-36 overflow-y-auto rounded-md border border-gray-700 bg-gray-900/80">
+                            {editStudentSuggestions.map((student) => (
+                              <button
+                                key={student.id}
+                                type="button"
+                                className="w-full px-2 py-1.5 text-left text-xs text-gray-200 hover:bg-gray-800"
+                                onClick={() => {
+                                  setEditForm((prev) => ({ ...prev, student: student.id }))
+                                  setEditStudentQuery(formatStudentLabel(student))
+                                }}
+                              >
+                                {formatStudentLabel(student)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                         <Input
                           value={editForm.incident}
                           onChange={(event) => setEditForm((prev) => ({ ...prev, incident: event.target.value }))}

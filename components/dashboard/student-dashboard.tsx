@@ -160,7 +160,7 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
   }, [currentUser.id])
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="dark min-h-screen bg-gray-950 text-white">
       <Sidebar activeSection={activeSection} onSectionChange={setActiveSection} />
       
       <main className="md:ml-64">
@@ -186,20 +186,20 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
               </div>
               
               <div className="grid gap-6 lg:grid-cols-2">
-                <CurrentCourses courses={data?.currentCourses ?? []} />
-                <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} />
+                <CurrentCourses courses={data?.currentCourses ?? []} studentId={currentUser.id} />
+                <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} student={data?.student} profile={data?.profile} />
               </div>
             </>
           )}
           
-          {activeSection === 'courses' && <CurrentCourses courses={data?.currentCourses ?? []} fullWidth />}
-          {activeSection === 'grades' && <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} fullWidth />}
+          {activeSection === 'courses' && <CurrentCourses courses={data?.currentCourses ?? []} studentId={currentUser.id} fullWidth />}
+          {activeSection === 'grades' && <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} student={data?.student} profile={data?.profile} fullWidth />}
           {activeSection === 'academic-history' && <AcademicHistory activities={data?.academicHistory ?? []} />}
           {activeSection === 'health' && <MedicalRecords studentId={currentUser.id} records={data?.medicalRecords ?? []} />}
-          {activeSection === 'counseling' && <CounselingRecords sessions={data?.counselingRecords ?? []} />}
+          {activeSection === 'counseling' && <CounselingRecords studentId={currentUser.id} sessions={data?.counselingRecords ?? []} />}
           {activeSection === 'discipline' && <DisciplineRecords studentId={currentUser.id} records={data?.disciplineRecords ?? []} />}
-          {activeSection === 'organizations' && <StudentOrganizations organizations={data?.organizations ?? []} />}
-          {activeSection === 'documents' && <StudentDocuments documents={data?.documents ?? []} />}
+          {activeSection === 'organizations' && <StudentOrganizations studentId={currentUser.id} organizations={data?.organizations ?? []} />}
+          {activeSection === 'documents' && <StudentDocuments studentId={currentUser.id} documents={data?.documents ?? []} />}
         </div>
       </main>
     </div>

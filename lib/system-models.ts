@@ -134,7 +134,7 @@ const notificationSchema = new Schema(
     message: { type: String, required: true, trim: true },
     type: {
       type: String,
-      enum: ['system', 'enrollment', 'academic', 'attendance', 'discipline'],
+      enum: ['system', 'enrollment', 'academic', 'attendance', 'discipline', 'counseling', 'organization'],
       default: 'system',
     },
     link: { type: String, default: '', trim: true },
@@ -196,6 +196,10 @@ const counselingRecordSchema = new Schema(
     summary: { type: String, required: true, trim: true },
     nextStep: { type: String, required: true, trim: true },
     sessionDate: { type: Date, required: true },
+    status: { type: String, default: 'open', trim: true },
+    reply: { type: String, default: '', trim: true },
+    replyBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    replyAt: { type: Date },
   },
   { timestamps: true }
 )
@@ -239,10 +243,15 @@ export const StudentDocument = ExistingStudentDocument ?? mongoose.model<Student
 const studentOrganizationSchema = new Schema(
   {
     student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    managedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     organizationName: { type: String, required: true, trim: true },
     role: { type: String, required: true, trim: true },
     joinedAt: { type: Date, required: true },
     status: { type: String, default: 'active' },
+    notes: { type: String, trim: true, default: '' },
+    eventDate: { type: Date },
+    reviewedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    decisionDate: { type: Date },
   },
   { timestamps: true }
 )
@@ -279,3 +288,122 @@ const systemSettingSchema = new Schema(
 export type SystemSettingRecord = InferSchemaType<typeof systemSettingSchema>
 const ExistingSystemSetting = mongoose.models.SystemSetting as Model<SystemSettingRecord> | undefined
 export const SystemSetting = ExistingSystemSetting ?? mongoose.model<SystemSettingRecord>('SystemSetting', systemSettingSchema)
+
+const attendanceSchema = new Schema(
+  {
+    student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    semester: { type: String, required: true, trim: true },
+    totalSessions: { type: Number, default: 0 },
+    sessionAttended: { type: Number, default: 0 },
+    attendancePercentage: { type: Number, default: 0 },
+    lastUpdated: { type: Date, default: Date.now },
+  },
+  { timestamps: true }
+)
+
+attendanceSchema.index({ student: 1, course: 1, semester: 1 }, { unique: true })
+
+export type AttendanceRecord = InferSchemaType<typeof attendanceSchema>
+const ExistingAttendance = mongoose.models.Attendance as Model<AttendanceRecord> | undefined
+export const Attendance = ExistingAttendance ?? mongoose.model<AttendanceRecord>('Attendance', attendanceSchema)
+
+const attendanceLogSchema = new Schema(
+  {
+    attendance: { type: Schema.Types.ObjectId, ref: 'Attendance', required: true },
+    sessionDate: { type: Date, required: true },
+    status: {
+      type: String,
+      enum: ['present', 'absent', 'late', 'excused'],
+      required: true,
+    },
+    remarks: { type: String, trim: true },
+  },
+  { timestamps: true }
+)
+
+export type AttendanceLogRecord = InferSchemaType<typeof attendanceLogSchema>
+const ExistingAttendanceLog = mongoose.models.AttendanceLog as Model<AttendanceLogRecord> | undefined
+export const AttendanceLog = ExistingAttendanceLog ?? mongoose.model<AttendanceLogRecord>('AttendanceLog', attendanceLogSchema)
+
+const gradeScaleSchema = new Schema(
+  {
+    institution: { type: String, required: true, trim: true },
+    letterGrade: { type: String, required: true, trim: true },
+    minScore: { type: Number, required: true },
+    maxScore: { type: Number, required: true },
+    pointValue: { type: Number, required: true },
+    description: { type: String, trim: true },
+  },
+  { timestamps: true }
+)
+
+gradeScaleSchema.index({ institution: 1, letterGrade: 1 }, { unique: true })
+
+export type GradeScaleRecord = InferSchemaType<typeof gradeScaleSchema>
+const ExistingGradeScale = mongoose.models.GradeScale as Model<GradeScaleRecord> | undefined
+export const GradeScale = ExistingGradeScale ?? mongoose.model<GradeScaleRecord>('GradeScale', gradeScaleSchema)
+
+const coursePrerequisiteSchema = new Schema(
+  {
+    course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    prerequisiteCourse: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    minGrade: { type: String, default: 'D', trim: true },
+  },
+  { timestamps: true }
+)
+
+coursePrerequisiteSchema.index({ course: 1, prerequisiteCourse: 1 }, { unique: true })
+
+export type CoursePrerequisiteRecord = InferSchemaType<typeof coursePrerequisiteSchema>
+const ExistingCoursePrerequisite = mongoose.models.CoursePrerequisite as Model<CoursePrerequisiteRecord> | undefined
+export const CoursePrerequisite = ExistingCoursePrerequisite ?? mongoose.model<CoursePrerequisiteRecord>('CoursePrerequisite', coursePrerequisiteSchema)
+
+const courseActivitySchema = new Schema(
+  {
+    course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    faculty: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: '', trim: true },
+    type: {
+      type: String,
+      enum: ['assignment', 'quiz', 'task', 'lecture'],
+      required: true,
+    },
+    dueDate: { type: Date },
+    points: { type: Number, default: 100 },
+    contentUrl: { type: String, default: '', trim: true },
+    status: { type: String, default: 'active', trim: true },
+  },
+  { timestamps: true }
+)
+
+courseActivitySchema.index({ course: 1, type: 1, createdAt: -1 })
+
+export type CourseActivityRecord = InferSchemaType<typeof courseActivitySchema>
+const ExistingCourseActivity = mongoose.models.CourseActivity as Model<CourseActivityRecord> | undefined
+export const CourseActivity = ExistingCourseActivity ?? mongoose.model<CourseActivityRecord>('CourseActivity', courseActivitySchema)
+
+const activitySubmissionSchema = new Schema(
+  {
+    activity: { type: Schema.Types.ObjectId, ref: 'CourseActivity', required: true },
+    course: { type: Schema.Types.ObjectId, ref: 'Course', required: true },
+    student: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    answer: { type: String, default: '', trim: true },
+    attachmentUrl: { type: String, default: '', trim: true },
+    submittedAt: { type: Date, default: Date.now },
+    status: { type: String, enum: ['submitted', 'graded'], default: 'submitted' },
+    score: { type: Number, default: null },
+    feedback: { type: String, default: '', trim: true },
+    gradedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    gradedAt: { type: Date },
+  },
+  { timestamps: true }
+)
+
+activitySubmissionSchema.index({ activity: 1, student: 1 }, { unique: true })
+
+export type ActivitySubmissionRecord = InferSchemaType<typeof activitySubmissionSchema>
+const ExistingActivitySubmission = mongoose.models.ActivitySubmission as Model<ActivitySubmissionRecord> | undefined
+export const ActivitySubmission = ExistingActivitySubmission ?? mongoose.model<ActivitySubmissionRecord>('ActivitySubmission', activitySubmissionSchema)
+

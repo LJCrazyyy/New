@@ -41,6 +41,7 @@ type CourseOption = {
   code: string
   name: string
   section: string
+  units?: number
 }
 
 type EnrollmentForm = {
@@ -137,7 +138,7 @@ export function EnrollmentManagement() {
 
       setEnrollments(enrollmentData)
       setStudents(studentData.map((student) => ({ id: student.id, name: student.name, systemId: student.systemId })))
-      setCourses(courseData.map((course) => ({ id: course.id, code: course.code, name: course.name, section: course.section })))
+      setCourses(courseData.map((course) => ({ id: course.id, code: course.code, name: course.name, section: course.section, units: (course as any).units })))
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load enrollment data.')
     } finally {
@@ -206,12 +207,52 @@ export function EnrollmentManagement() {
     }
   }
 
+  const getStudentCurrentUnits = (studentId: string, semester: string): number => {
+    return enrollments
+      .filter((e) => e.student?.id === studentId && e.semester === semester && ['enrolled', 'pending'].includes(e.status))
+      .reduce((sum, e) => {
+        const courseData = courses.find((c) => c.id === e.course?.id)
+        return sum + (courseData?.units ?? 0)
+      }, 0)
+  }
+
+  const getSelectedCourseUnits = (): number => {
+    const selectedCourse = courses.find((c) => c.id === form.course)
+    return selectedCourse?.units ?? 0
+  }
+
+  const canEnroll = (): { canEnroll: boolean; message?: string } => {
+    if (!form.student || !form.course || !form.semester) {
+      return { canEnroll: false }
+    }
+
+    const currentUnits = getStudentCurrentUnits(form.student, form.semester)
+    const courseUnits = getSelectedCourseUnits()
+    const totalWouldBe = currentUnits + courseUnits
+    const MAX_UNITS = 21
+
+    if (totalWouldBe > MAX_UNITS) {
+      return {
+        canEnroll: false,
+        message: `Cannot enroll: student would have ${totalWouldBe} units (limit is ${MAX_UNITS})`,
+      }
+    }
+
+    return { canEnroll: true }
+  }
+
   const onCreateEnrollment = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
 
     if (!form.student || !form.course || !form.semester) {
       setError('Please select student, course, and semester.')
+      return
+    }
+
+    const { canEnroll: isAllowed, message } = canEnroll()
+    if (!isAllowed) {
+      setError(message || 'Cannot enroll student.')
       return
     }
 
@@ -284,28 +325,49 @@ export function EnrollmentManagement() {
       </CardHeader>
       <CardContent className="space-y-4">
         {showCreate && (
-          <form className="grid gap-3 md:grid-cols-4 rounded-lg border border-gray-700 bg-gray-800/40 p-4" onSubmit={onCreateEnrollment}>
-            <select value={form.student} onChange={(e) => setForm((p) => ({ ...p, student: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
-              <option value="">Select Student</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>{student.name} ({student.systemId})</option>
-              ))}
-            </select>
-            <select value={form.course} onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
-              <option value="">Select Course</option>
-              {courses.map((course) => (
-                <option key={course.id} value={course.id}>{course.code} - {course.name} ({course.section})</option>
-              ))}
-            </select>
-            <Input value={form.semester} onChange={(e) => setForm((p) => ({ ...p, semester: e.target.value }))} placeholder="Semester" className="bg-gray-800 border-gray-700 text-white" />
-            <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as EnrollmentForm['status'] }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
-              <option value="pending">Pending</option>
-              <option value="enrolled">Enrolled</option>
-              <option value="completed">Completed</option>
-              <option value="dropped">Dropped</option>
-            </select>
-            <div className="md:col-span-4 flex justify-end">
-              <Button type="submit" disabled={isSaving} className="bg-green-600 hover:bg-green-700">{isSaving ? 'Saving...' : 'Create Enrollment'}</Button>
+          <form className="gap-3 rounded-lg border border-gray-700 bg-gray-800/40 p-4 space-y-3" onSubmit={onCreateEnrollment}>
+            <div className="grid gap-3 md:grid-cols-4">
+              <select value={form.student} onChange={(e) => setForm((p) => ({ ...p, student: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                <option value="">Select Student</option>
+                {students.map((student) => (
+                  <option key={student.id} value={student.id}>{student.name} ({student.systemId})</option>
+                ))}
+              </select>
+              <select value={form.course} onChange={(e) => setForm((p) => ({ ...p, course: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                <option value="">Select Course</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>{course.code} - {course.name} ({course.section}) - {course.units || 0} units</option>
+                ))}
+              </select>
+              <Input value={form.semester} onChange={(e) => setForm((p) => ({ ...p, semester: e.target.value }))} placeholder="Semester" className="bg-gray-800 border-gray-700 text-white" />
+              <select value={form.status} onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as EnrollmentForm['status'] }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                <option value="pending">Pending</option>
+                <option value="enrolled">Enrolled</option>
+                <option value="completed">Completed</option>
+                <option value="dropped">Dropped</option>
+              </select>
+            </div>
+
+            {/* Unit Information Display */}
+            {form.student && form.course && form.semester && (
+              <div className="p-3 rounded-md bg-gray-700/30 border border-gray-600">
+                <div className="flex items-center justify-between text-sm">
+                  <div>
+                    <p className="text-gray-300">Current Units: <span className="font-semibold text-blue-400">{getStudentCurrentUnits(form.student, form.semester)}</span></p>
+                    <p className="text-gray-300">Course Units: <span className="font-semibold text-green-400">{getSelectedCourseUnits()}</span></p>
+                    <p className="text-gray-300">Total After Enrollment: <span className={`font-semibold ${getStudentCurrentUnits(form.student, form.semester) + getSelectedCourseUnits() > 21 ? 'text-red-400' : 'text-white'}`}>{getStudentCurrentUnits(form.student, form.semester) + getSelectedCourseUnits()}</span> / 21</p>
+                  </div>
+                  {getStudentCurrentUnits(form.student, form.semester) + getSelectedCourseUnits() > 21 && (
+                    <div className="text-right">
+                      <Badge className="bg-red-900 text-red-200 border-red-700 border">Exceeds Limit</Badge>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end">
+              <Button type="submit" disabled={isSaving || !canEnroll().canEnroll} className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">{isSaving ? 'Saving...' : 'Create Enrollment'}</Button>
             </div>
           </form>
         )}

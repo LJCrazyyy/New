@@ -8,6 +8,14 @@ import {
   BarChart3,
   HeartPulse,
   AlertTriangle,
+  UserCog,
+  GraduationCap,
+  FileCheckIcon,
+  Users2,
+  BookMarked,
+  Clock,
+  Percent,
+  GitBranch,
 } from 'lucide-react'
 
 interface AdminSidebarProps {
@@ -19,8 +27,16 @@ export function AdminSidebar({ activeSection, onSectionChange }: AdminSidebarPro
   const sections = [
     { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'users', label: 'User Management', icon: Users },
+    { id: 'student-profiles', label: 'Student Profiles', icon: GraduationCap },
+    { id: 'faculty-profiles', label: 'Faculty Profiles', icon: UserCog },
     { id: 'courses', label: 'Courses', icon: BookOpen },
     { id: 'enrollment', label: 'Enrollment', icon: UserCheck },
+    { id: 'attendance', label: 'Attendance', icon: Clock },
+    { id: 'grade-scales', label: 'Grade Scales', icon: Percent },
+    { id: 'course-prerequisites', label: 'Course Prerequisites', icon: GitBranch },
+    { id: 'academic-history', label: 'Academic History', icon: BookMarked },
+    { id: 'documents', label: 'Student Documents', icon: FileCheckIcon },
+    { id: 'organizations', label: 'Organizations', icon: Users2 },
     { id: 'medical-records', label: 'Medical Records', icon: HeartPulse },
     { id: 'discipline-records', label: 'Discipline Records', icon: AlertTriangle },
     { id: 'audit-logs', label: 'Audit Logs', icon: FileText },

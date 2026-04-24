@@ -3,11 +3,15 @@ import {
   AcademicHistory,
   AdminProfile,
   AuditLog,
+  Attendance,
+  AttendanceLog,
   CounselingRecord,
   Course,
+  CoursePrerequisite,
   DisciplineRecord,
   Enrollment,
   FacultyProfile,
+  GradeScale,
   MedicalRecord,
   Notification,
   StudentDocument,
@@ -36,15 +40,138 @@ export type SeedResult = {
 
 export type BulkStudentSeedResult = {
   requested: number
+  targetTotal: number
   createdUsers: number
   createdProfiles: number
   totalStudents: number
   coursesEnsured: number
   coursesNewlyCreated: number
   enrollmentsCreated: number
+  attendanceRecordsUpserted: number
+  counselingRecordsUpserted: number
+  documentsUpserted: number
+  organizationsUpserted: number
+  academicHistoryUpserted: number
+  medicalRecordsUpserted: number
+  disciplineRecordsUpserted: number
+  gradeScalesEnsured: number
+  prerequisitesEnsured: number
   defaultPassword: string
   firstStudentSystemId: string | null
   lastStudentSystemId: string | null
+}
+
+const facultyFirstNames = [
+  'Maria', 'Jose', 'Ana', 'Rafael', 'Catherine', 'Mark', 'Lea', 'Daniel', 'Grace', 'Andres',
+  'Elena', 'Paolo', 'Rosa', 'Victor', 'Nina', 'Samuel', 'Theresa', 'Miguel', 'Clara', 'Hector',
+]
+
+const facultyLastNames = [
+  'Garcia', 'Reyes', 'Santos', 'Cruz', 'Mendoza', 'Lopez', 'Dela Cruz', 'Ramos', 'Torres', 'Flores',
+]
+
+const facultyDepartments = [
+  'General Education',
+  'Information Technology',
+  'Computer Science',
+  'Business Administration',
+  'Education',
+  'Social Sciences',
+  'Natural Sciences',
+  'Mathematics',
+  'Humanities',
+  'Student Affairs',
+]
+
+function normalizeEmailHandle(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '.')
+    .replace(/^\.+|\.+$/g, '')
+}
+
+function padFacultySequence(value: number) {
+  return String(value).padStart(3, '0')
+}
+
+function buildFacultyRoster(total = 200) {
+  const roster: Array<{
+    systemId: string
+    name: string
+    email: string
+    passwordHash: string
+    role: 'faculty'
+    status: 'active'
+    joinedAt: Date
+    department: string
+    title: string
+    office: string
+    coursesAssigned: never[]
+  }> = []
+
+  for (let index = 0; index < total; index += 1) {
+    const firstName = facultyFirstNames[index % facultyFirstNames.length]
+    const lastName = facultyLastNames[Math.floor(index / facultyFirstNames.length) % facultyLastNames.length]
+    const prefix = index % 3 === 0 ? 'Dr.' : index % 3 === 1 ? 'Prof.' : 'Mr.'
+    const name = `${prefix} ${firstName} ${lastName}`
+    const emailHandle = normalizeEmailHandle(`${firstName}.${lastName}.${index + 1}`)
+    const department = facultyDepartments[index % facultyDepartments.length]
+
+    roster.push({
+      systemId: `FAC${padFacultySequence(index + 1)}`,
+      name,
+      email: `${emailHandle}@school.com`,
+      passwordHash: 'faculty123',
+      role: 'faculty',
+      status: 'active',
+      joinedAt: new Date(2019 + (index % 5), index % 12, (index % 25) + 1),
+      department,
+      title: prefix === 'Dr.' ? 'Professor' : prefix === 'Prof.' ? 'Associate Professor' : 'Instructor',
+      office: `Faculty Room ${String((index % 25) + 1).padStart(2, '0')}`,
+      coursesAssigned: [],
+    })
+  }
+
+  return roster
+}
+
+async function ensureFacultyRoster(total = 200) {
+  const roster = buildFacultyRoster(total)
+  const existingFacultyUsers = await User.find({ role: 'faculty' }).sort({ systemId: 1 }).select('_id systemId email').lean()
+  const existingSystemIds = new Set(existingFacultyUsers.map((faculty) => faculty.systemId))
+  const existingEmails = new Set(existingFacultyUsers.map((faculty) => faculty.email))
+
+  const usersToCreate = roster.filter((faculty) => !existingSystemIds.has(faculty.systemId) && !existingEmails.has(faculty.email))
+
+  if (usersToCreate.length > 0) {
+    await User.insertMany(usersToCreate, { ordered: true })
+  }
+
+  const facultyUsers = await User.find({ role: 'faculty' }).sort({ systemId: 1 }).select('_id systemId name email role status').lean()
+  const facultyIds = facultyUsers.map((faculty) => faculty._id)
+  const existingProfiles = await FacultyProfile.find({ user: { $in: facultyIds } }).select('user').lean()
+  const profiledFacultyIds = new Set(existingProfiles.map((profile) => String(profile.user)))
+
+  const profilesToInsert = facultyUsers
+    .filter((faculty) => !profiledFacultyIds.has(String(faculty._id)))
+    .map((faculty, index) => {
+      const rosterEntry = roster[index % roster.length]
+
+      return {
+        user: faculty._id,
+        employeeNumber: `EMP${padFacultySequence(index + 1)}`,
+        department: rosterEntry.department,
+        title: rosterEntry.title,
+        office: rosterEntry.office,
+        coursesAssigned: [],
+      }
+    })
+
+  if (profilesToInsert.length > 0) {
+    await FacultyProfile.insertMany(profilesToInsert, { ordered: false })
+  }
+
+  return facultyUsers
 }
 
 async function ensureRoleNotifications() {
@@ -114,7 +241,12 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
 
   await ensureRoleNotifications()
 
-  const [studentUser, facultyUser, adminUser] = await User.insertMany([
+  const facultyUsers = await ensureFacultyRoster(200)
+  const firstFaculty = facultyUsers[0]
+  const secondFaculty = facultyUsers[1] ?? firstFaculty
+  const thirdFaculty = facultyUsers[2] ?? firstFaculty
+
+  const [studentUser, adminUser] = await User.insertMany([
     {
       systemId: 'STU001',
       name: 'John Smith',
@@ -123,15 +255,6 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       role: 'student',
       status: 'active',
       joinedAt: new Date('2024-01-10T00:00:00.000Z'),
-    },
-    {
-      systemId: 'FAC001',
-      name: 'Dr. Maria Garcia',
-      email: 'faculty@school.com',
-      passwordHash: 'faculty123',
-      role: 'faculty',
-      status: 'active',
-      joinedAt: new Date('2020-08-20T00:00:00.000Z'),
     },
     {
       systemId: 'ADM001',
@@ -167,7 +290,7 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       semester: 'Spring 2024',
       schedule: 'MWF 10:00-11:00 AM',
       room: 'Science Bldg 101',
-      faculty: facultyUser._id,
+      faculty: firstFaculty?._id,
       capacity: 45,
       enrolledCount: 45,
     },
@@ -179,7 +302,7 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       semester: 'Spring 2024',
       schedule: 'TTh 2:00-3:30 PM',
       room: 'Science Bldg 205',
-      faculty: facultyUser._id,
+      faculty: secondFaculty?._id,
       capacity: 35,
       enrolledCount: 32,
     },
@@ -191,22 +314,22 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       semester: 'Spring 2024',
       schedule: 'MWF 1:00-2:00 PM',
       room: 'Science Bldg 301',
-      faculty: facultyUser._id,
+      faculty: thirdFaculty?._id,
       capacity: 30,
       enrolledCount: 28,
     },
   ])
 
-  await FacultyProfile.insertMany([
-    {
-      user: facultyUser._id,
-      employeeNumber: 'EMP-FAC-001',
-      department: 'Computer Science',
-      title: 'Associate Professor',
-      office: 'Room 302, Science Building',
-      coursesAssigned: [introProgramming._id, dataStructures._id, databaseSystems._id],
-    },
-  ])
+  if (firstFaculty?._id) {
+    await FacultyProfile.updateOne(
+      { user: firstFaculty._id },
+      {
+        $set: {
+          coursesAssigned: [introProgramming._id, dataStructures._id, databaseSystems._id],
+        },
+      }
+    )
+  }
 
   await AdminProfile.insertMany([
     {
@@ -257,7 +380,7 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       details: 'Final grade for Database Systems recorded as A-',
       relatedCourse: databaseSystems._id,
       recordedAt: new Date('2024-03-05T00:00:00.000Z'),
-      createdBy: facultyUser._id,
+      createdBy: firstFaculty?._id,
     },
     {
       student: studentUser._id,
@@ -283,11 +406,15 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
   await CounselingRecord.insertMany([
     {
       student: studentUser._id,
-      counselor: adminUser._id,
+      counselor: secondFaculty?._id,
       topic: 'Academic workload',
       summary: 'Reviewed study schedule and support options.',
       nextStep: 'Follow up after midterm week.',
       sessionDate: new Date('2024-02-20T00:00:00.000Z'),
+      status: 'closed',
+      reply: 'Keep monitoring your workload and submit the registration form before the deadline.',
+      replyBy: secondFaculty?._id,
+      replyAt: new Date('2024-02-21T00:00:00.000Z'),
     },
   ])
 
@@ -353,9 +480,9 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
   ])
 
   return {
-    users: 3,
+    users: facultyUsers.length + 2,
     studentProfiles: 1,
-    facultyProfiles: 1,
+    facultyProfiles: facultyUsers.length,
     adminProfiles: 1,
     courses: 3,
     enrollments: 2,
@@ -484,10 +611,10 @@ const bulkStudentCourseCatalog: CourseSeedInput[] = [
 ]
 
 async function ensureFacultyForBulkCourses() {
-  const facultyUser = await User.findOne({ role: 'faculty' })
+  const facultyUsers = await ensureFacultyRoster(200)
 
-  if (facultyUser) {
-    return facultyUser
+  if (facultyUsers.length > 0) {
+    return facultyUsers[0]
   }
 
   const fallbackFaculty = await User.create({
@@ -513,7 +640,8 @@ async function ensureFacultyForBulkCourses() {
 }
 
 async function ensureBulkCoursesAndEnrollStudents(defaultSemester: string) {
-  const facultyUser = await ensureFacultyForBulkCourses()
+  const facultyUsers = await ensureFacultyRoster(200)
+  const facultyPool = facultyUsers.length > 0 ? facultyUsers : [await ensureFacultyForBulkCourses()]
 
   const existingCourses = await Course.find({ semester: defaultSemester }).select('_id code section semester')
   const existingCourseKeys = new Set(existingCourses.map((course) => `${course.code}|${course.section}|${course.semester}`))
@@ -523,11 +651,12 @@ async function ensureBulkCoursesAndEnrollStudents(defaultSemester: string) {
 
   for (const courseInput of bulkStudentCourseCatalog) {
     const courseKey = `${courseInput.code}|${courseInput.section}|${courseInput.semester}`
+    const assignedFaculty = facultyPool[coursesNewlyCreated % facultyPool.length]
 
     if (!existingCourseKeys.has(courseKey)) {
       const createdCourse = await Course.create({
         ...courseInput,
-        faculty: facultyUser._id,
+        faculty: assignedFaculty._id,
         enrolledCount: 0,
       })
       createdCourseDocs.push({ _id: createdCourse._id })
@@ -720,6 +849,473 @@ async function ensureBulkMedicalAndDisciplineRecords() {
   if (disciplineOperations.length > 0) {
     await DisciplineRecord.bulkWrite(disciplineOperations, { ordered: false })
   }
+
+  return {
+    medicalUpserted: medicalOperations.length,
+    disciplineUpserted: disciplineOperations.length,
+  }
+}
+
+async function ensureGradeScalesAndPrerequisites(defaultSemester: string) {
+  const gradeScaleSeed = [
+    { institution: 'Campus System', letterGrade: 'A', minScore: 90, maxScore: 100, pointValue: 4, description: 'Excellent' },
+    { institution: 'Campus System', letterGrade: 'B', minScore: 80, maxScore: 89.99, pointValue: 3, description: 'Very Good' },
+    { institution: 'Campus System', letterGrade: 'C', minScore: 70, maxScore: 79.99, pointValue: 2, description: 'Good' },
+    { institution: 'Campus System', letterGrade: 'D', minScore: 60, maxScore: 69.99, pointValue: 1, description: 'Passing' },
+    { institution: 'Campus System', letterGrade: 'F', minScore: 0, maxScore: 59.99, pointValue: 0, description: 'Failing' },
+  ]
+
+  const gradeScaleOperations = gradeScaleSeed.map((entry) => ({
+    updateOne: {
+      filter: {
+        institution: entry.institution,
+        letterGrade: entry.letterGrade,
+      },
+      update: {
+        $set: entry,
+      },
+      upsert: true,
+    },
+  }))
+
+  if (gradeScaleOperations.length > 0) {
+    await GradeScale.bulkWrite(gradeScaleOperations, { ordered: false })
+  }
+
+  const prerequisitePairs = [
+    { courseCode: 'CS102', prerequisiteCode: 'CS101', minGrade: 'D' },
+    { courseCode: 'IT103', prerequisiteCode: 'CS101', minGrade: 'D' },
+  ]
+
+  const prerequisiteCourses = await Course.find({
+    semester: defaultSemester,
+    code: { $in: Array.from(new Set(prerequisitePairs.flatMap((item) => [item.courseCode, item.prerequisiteCode]))) },
+  }).select('_id code')
+
+  const courseByCode = new Map(prerequisiteCourses.map((course) => [course.code, course]))
+  const prerequisiteOperations = prerequisitePairs
+    .map((pair) => {
+      const targetCourse = courseByCode.get(pair.courseCode)
+      const prerequisiteCourse = courseByCode.get(pair.prerequisiteCode)
+
+      if (!targetCourse || !prerequisiteCourse) {
+        return null
+      }
+
+      return {
+        updateOne: {
+          filter: {
+            course: targetCourse._id,
+            prerequisiteCourse: prerequisiteCourse._id,
+          },
+          update: {
+            $set: {
+              course: targetCourse._id,
+              prerequisiteCourse: prerequisiteCourse._id,
+              minGrade: pair.minGrade,
+            },
+          },
+          upsert: true,
+        },
+      }
+    })
+    .filter(Boolean) as Array<Record<string, unknown>>
+
+  if (prerequisiteOperations.length > 0) {
+    await CoursePrerequisite.bulkWrite(prerequisiteOperations as any, { ordered: false })
+  }
+
+  return {
+    gradeScalesEnsured: gradeScaleOperations.length,
+    prerequisitesEnsured: prerequisiteOperations.length,
+  }
+}
+
+async function ensureBulkEnhancementRecords(defaultSemester: string) {
+  const [studentUsers, facultyUsers, adminUser] = await Promise.all([
+    User.find({ role: 'student' }).select('_id systemId name').lean(),
+    User.find({ role: 'faculty' }).sort({ systemId: 1 }).select('_id').lean(),
+    User.findOne({ role: 'admin' }).select('_id').lean(),
+  ])
+
+  if (studentUsers.length === 0) {
+    return {
+      attendanceRecordsUpserted: 0,
+      counselingRecordsUpserted: 0,
+      documentsUpserted: 0,
+      organizationsUpserted: 0,
+      academicHistoryUpserted: 0,
+    }
+  }
+
+  const counselorPool = facultyUsers.length > 0 ? facultyUsers : adminUser?._id ? [adminUser] : []
+
+  const enrollments = await Enrollment.find({
+    semester: defaultSemester,
+    student: { $in: studentUsers.map((student) => student._id) },
+  })
+    .select('_id student course semester status average gradeLetter')
+    .populate('course', 'code name')
+
+  const enrollmentByStudent = new Map<string, any[]>()
+  for (const enrollment of enrollments) {
+    const studentId = String(enrollment.student)
+    if (!enrollmentByStudent.has(studentId)) {
+      enrollmentByStudent.set(studentId, [])
+    }
+    enrollmentByStudent.get(studentId)?.push(enrollment)
+  }
+
+  const now = Date.now()
+
+  const attendanceOperations = enrollments.map((enrollment, index) => {
+    const averageValue = typeof enrollment.average === 'number' ? enrollment.average : 78
+    const totalSessions = 28 + (index % 6)
+    const percentage = Math.max(65, Math.min(98, Math.round(averageValue)))
+    const sessionAttended = Math.min(totalSessions, Math.max(0, Math.round((percentage / 100) * totalSessions)))
+
+    return {
+      updateOne: {
+        filter: {
+          student: enrollment.student,
+          course: enrollment.course?._id ?? enrollment.course,
+          semester: enrollment.semester,
+        },
+        update: {
+          $set: {
+            student: enrollment.student,
+            course: enrollment.course?._id ?? enrollment.course,
+            semester: enrollment.semester,
+            totalSessions,
+            sessionAttended,
+            attendancePercentage: Number(((sessionAttended / totalSessions) * 100).toFixed(2)),
+            lastUpdated: new Date(now - (index % 14) * 24 * 60 * 60 * 1000),
+          },
+        },
+        upsert: true,
+      },
+    }
+  })
+
+  if (attendanceOperations.length > 0) {
+    await Attendance.bulkWrite(attendanceOperations, { ordered: false })
+  }
+
+  const attendanceRecords = await Attendance.find({
+    semester: defaultSemester,
+    student: { $in: studentUsers.map((student) => student._id) },
+  }).select('_id student totalSessions sessionAttended')
+
+  const attendanceLogOperations = attendanceRecords.flatMap((record, index) => {
+    const baseDate = now - ((index % 21) + 1) * 24 * 60 * 60 * 1000
+
+    return [
+      {
+        updateOne: {
+          filter: {
+            attendance: record._id,
+            sessionDate: new Date(baseDate),
+          },
+          update: {
+            $set: {
+              attendance: record._id,
+              sessionDate: new Date(baseDate),
+              status: 'present',
+              remarks: 'Auto-seeded present session.',
+            },
+          },
+          upsert: true,
+        },
+      },
+      {
+        updateOne: {
+          filter: {
+            attendance: record._id,
+            sessionDate: new Date(baseDate - 2 * 24 * 60 * 60 * 1000),
+          },
+          update: {
+            $set: {
+              attendance: record._id,
+              sessionDate: new Date(baseDate - 2 * 24 * 60 * 60 * 1000),
+              status: (index % 5 === 0 ? 'absent' : 'late') as 'absent' | 'late',
+              remarks: 'Auto-seeded attendance variance.',
+            },
+          },
+          upsert: true,
+        },
+      },
+    ]
+  })
+
+  if (attendanceLogOperations.length > 0) {
+    await AttendanceLog.bulkWrite(attendanceLogOperations, { ordered: false })
+  }
+
+  const counselingOperations = counselorPool.length > 0
+    ? studentUsers.map((student, index) => {
+        const counselor = counselorPool[index % counselorPool.length]
+
+        return {
+          updateOne: {
+            filter: {
+              student: student._id,
+              topic: 'Academic planning',
+            },
+            update: {
+              $set: {
+                student: student._id,
+                counselor: counselor._id,
+                topic: 'Academic planning',
+                summary: 'Reviewed semester workload, attendance trend, and study cadence.',
+                nextStep: 'Follow up after the next major exam cycle.',
+                sessionDate: new Date(now - ((index % 90) + 10) * 24 * 60 * 60 * 1000),
+                status: 'open',
+                reply: index % 6 === 0 ? 'Please visit the guidance office after your next class.' : '',
+                replyBy: index % 6 === 0 ? counselor._id : undefined,
+                replyAt: index % 6 === 0 ? new Date(now - ((index % 60) + 5) * 24 * 60 * 60 * 1000) : undefined,
+              },
+            },
+            upsert: true,
+          },
+        }
+      })
+    : []
+
+  if (counselingOperations.length > 0) {
+    await CounselingRecord.bulkWrite(counselingOperations, { ordered: false })
+  }
+
+  const counselingNotificationOperations = counselorPool.length > 0
+    ? studentUsers.map((student, index) => {
+        const counselor = counselorPool[index % counselorPool.length]
+
+        return {
+          updateOne: {
+            filter: {
+              recipientRole: 'faculty',
+              recipientId: String(counselor._id),
+              title: `Counseling request from ${student.systemId ?? 'student'}`,
+            },
+            update: {
+              $set: {
+                recipientRole: 'faculty',
+                recipientId: String(counselor._id),
+                title: `Counseling request from ${student.systemId ?? 'student'}`,
+                message: `A counseling thread was created for ${student.name ?? 'a student'} and assigned to you.`,
+                type: 'counseling',
+                link: '/dashboard',
+                isRead: false,
+              },
+            },
+            upsert: true,
+          },
+        }
+      })
+    : []
+
+  if (counselingNotificationOperations.length > 0) {
+    await Notification.bulkWrite(counselingNotificationOperations, { ordered: false })
+  }
+
+  const documentOperations = studentUsers.flatMap((student, index) => {
+    const suffix = String(student.systemId ?? '').toLowerCase()
+
+    return [
+      {
+        updateOne: {
+          filter: {
+            student: student._id,
+            title: 'Official Study Load',
+          },
+          update: {
+            $set: {
+              student: student._id,
+              title: 'Official Study Load',
+              category: 'Transcript',
+              fileName: `${suffix}-study-load.pdf`,
+              fileUrl: `/documents/${suffix}-study-load.pdf`,
+              status: 'available',
+            },
+          },
+          upsert: true,
+        },
+      },
+      {
+        updateOne: {
+          filter: {
+            student: student._id,
+            title: 'Registration Form',
+          },
+          update: {
+            $set: {
+              student: student._id,
+              title: 'Registration Form',
+              category: 'Certificate',
+              fileName: `${suffix}-registration.pdf`,
+              fileUrl: `/documents/${suffix}-registration.pdf`,
+              status: index % 7 === 0 ? 'pending' : 'available',
+            },
+          },
+          upsert: true,
+        },
+      },
+    ]
+  })
+
+  if (documentOperations.length > 0) {
+    await StudentDocument.bulkWrite(documentOperations, { ordered: false })
+  }
+
+  const organizationNames = ['IT Society', 'Code Collective', 'Campus Peer Mentors', 'Robotics Guild']
+  const organizationRoles = ['Member', 'Officer', 'Secretary', 'Treasurer']
+
+  const organizationOperations = studentUsers.map((student, index) => ({
+    updateOne: {
+      filter: {
+        student: student._id,
+        organizationName: organizationNames[index % organizationNames.length],
+      },
+      update: {
+        $set: {
+          student: student._id,
+          organizationName: organizationNames[index % organizationNames.length],
+          role: organizationRoles[index % organizationRoles.length],
+          joinedAt: new Date(now - ((index % 180) + 30) * 24 * 60 * 60 * 1000),
+          status: 'active',
+        },
+      },
+      upsert: true,
+    },
+  }))
+
+  if (organizationOperations.length > 0) {
+    await StudentOrganization.bulkWrite(organizationOperations, { ordered: false })
+  }
+
+  const historyOperations = studentUsers.flatMap((student, index) => {
+    const studentEnrollments = enrollmentByStudent.get(String(student._id)) ?? []
+    const topEnrollment = studentEnrollments[0]
+
+    return [
+      {
+        updateOne: {
+          filter: {
+            student: student._id,
+            type: 'enrollment',
+            description: `Fall 2026 enrollment processed`,
+          },
+          update: {
+            $set: {
+              student: student._id,
+              type: 'enrollment',
+              description: 'Fall 2026 enrollment processed',
+              details: `Student enrolled in ${studentEnrollments.length} courses for ${defaultSemester}.`,
+              recordedAt: new Date(now - ((index % 40) + 5) * 24 * 60 * 60 * 1000),
+              createdBy: counselorId,
+            },
+          },
+          upsert: true,
+        },
+      },
+      {
+        updateOne: {
+          filter: {
+            student: student._id,
+            type: 'milestone',
+            description: `Attendance baseline established`,
+          },
+          update: {
+            $set: {
+              student: student._id,
+              type: 'milestone',
+              description: 'Attendance baseline established',
+              details: 'Attendance tracking initialized for current semester classes.',
+              relatedCourse: topEnrollment?.course?._id ?? topEnrollment?.course,
+              recordedAt: new Date(now - ((index % 30) + 3) * 24 * 60 * 60 * 1000),
+              createdBy: counselorId,
+            },
+          },
+          upsert: true,
+        },
+      },
+    ]
+  })
+
+  if (historyOperations.length > 0) {
+    await AcademicHistory.bulkWrite(historyOperations, { ordered: false })
+  }
+
+  const notificationOperations = studentUsers.map((student) => ({
+    updateOne: {
+      filter: {
+        recipientRole: 'student',
+        recipientId: String(student._id),
+        title: 'Semester data sync complete',
+      },
+      update: {
+        $set: {
+          recipientRole: 'student',
+          recipientId: String(student._id),
+          title: 'Semester data sync complete',
+          message: 'Your enrollments, attendance, documents, and records are fully connected for the current semester.',
+          type: 'system',
+          link: '/',
+          isRead: false,
+        },
+      },
+      upsert: true,
+    },
+  }))
+
+  if (notificationOperations.length > 0) {
+    await Notification.bulkWrite(notificationOperations, { ordered: false })
+  }
+
+  return {
+    attendanceRecordsUpserted: attendanceOperations.length,
+    counselingRecordsUpserted: counselingOperations.length,
+    documentsUpserted: documentOperations.length,
+    organizationsUpserted: organizationOperations.length,
+    academicHistoryUpserted: historyOperations.length,
+  }
+}
+
+async function pruneStudentPopulation(targetTotal: number) {
+  const currentStudents = await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()
+
+  if (targetTotal <= 0 || currentStudents.length <= targetTotal) {
+    return { removed: 0 }
+  }
+
+  const overflowStudents = currentStudents.slice(targetTotal)
+  const overflowIds = overflowStudents.map((student) => student._id)
+  const overflowIdStrings = overflowStudents.map((student) => String(student._id))
+
+  const attendanceRecords = await Attendance.find({ student: { $in: overflowIds } }).select('_id').lean()
+  const attendanceIds = attendanceRecords.map((record) => record._id)
+
+  await Promise.all([
+    StudentProfile.deleteMany({ user: { $in: overflowIds } }),
+    Enrollment.deleteMany({ student: { $in: overflowIds } }),
+    MedicalRecord.deleteMany({ student: { $in: overflowIds } }),
+    CounselingRecord.deleteMany({ student: { $in: overflowIds } }),
+    DisciplineRecord.deleteMany({ student: { $in: overflowIds } }),
+    StudentDocument.deleteMany({ student: { $in: overflowIds } }),
+    StudentOrganization.deleteMany({ student: { $in: overflowIds } }),
+    AcademicHistory.deleteMany({ student: { $in: overflowIds } }),
+    Attendance.deleteMany({ student: { $in: overflowIds } }),
+    Notification.deleteMany({ recipientRole: 'student', recipientId: { $in: overflowIdStrings } }),
+  ])
+
+  if (attendanceIds.length > 0) {
+    await AttendanceLog.deleteMany({ attendance: { $in: attendanceIds } })
+  }
+
+  await User.deleteMany({ _id: { $in: overflowIds } })
+
+  return {
+    removed: overflowStudents.length,
+  }
 }
 
 export async function seedBulkStudents(options?: {
@@ -732,7 +1328,7 @@ export async function seedBulkStudents(options?: {
   const defaultPassword = options?.defaultPassword?.trim() || 'student123'
   const defaultSemester = 'Fall 2026'
 
-  const existingStudentUsers = await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()
+  let existingStudentUsers = await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()
   const maxExistingSequence = existingStudentUsers.reduce((maxSequence, student) => {
     const sequence = parseStudentSequence(student.systemId ?? '')
     return sequence > maxSequence ? sequence : maxSequence
@@ -742,24 +1338,17 @@ export async function seedBulkStudents(options?: {
     throw new Error(`Seed identity pool is too small for ${existingStudentUsers.length} students.`)
   }
 
-  if (existingStudentUsers.length > 0) {
-    const renameOperations = existingStudentUsers.map((student, index) => {
-      const identity = generatedStudentIdentities[index]
+  const targetTotal = requested === 0 ? existingStudentUsers.length : requested
 
-      return {
-        updateOne: {
-          filter: { _id: student._id },
-          update: {
-            $set: {
-              name: identity.name,
-              email: identity.email,
-            },
-          },
-        },
-      }
-    })
+  if (targetTotal > generatedStudentIdentities.length) {
+    throw new Error(`Seed identity pool is too small for target total ${targetTotal} students.`)
+  }
 
-    await User.bulkWrite(renameOperations, { ordered: true })
+  const studentsToCreate = Math.max(0, targetTotal - existingStudentUsers.length)
+
+  if (requested > 0 && existingStudentUsers.length > targetTotal) {
+    await pruneStudentPopulation(targetTotal)
+    existingStudentUsers = await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()
   }
 
   const usersToInsert: Array<{
@@ -772,7 +1361,7 @@ export async function seedBulkStudents(options?: {
     joinedAt: Date
   }> = []
 
-  for (let index = 1; index <= requested; index += 1) {
+  for (let index = 1; index <= studentsToCreate; index += 1) {
     const sequence = maxExistingSequence + index
     const suffix = padStudentSequence(sequence)
     const identity = generatedStudentIdentities[existingStudentUsers.length + index - 1]
@@ -814,19 +1403,73 @@ export async function seedBulkStudents(options?: {
     ? await StudentProfile.insertMany(profilesToInsert, { ordered: true })
     : []
 
+  const allStudentUsers = await User.find({ role: 'student' }).select('_id systemId').lean()
+  const studentUserIds = allStudentUsers.map((student) => student._id)
+
+  await StudentProfile.deleteMany({ user: { $nin: studentUserIds } })
+
+  const existingProfiles = await StudentProfile.find({ user: { $in: studentUserIds } }).select('user studentNumber').lean()
+  const profiledUserIds = new Set(existingProfiles.map((profile) => String(profile.user)))
+  const existingStudentNumbers = new Set(existingProfiles.map((profile) => String(profile.studentNumber ?? '').trim()).filter(Boolean))
+
+  let profileNumberCursor = 1
+  const getNextStudentNumber = () => {
+    while (existingStudentNumbers.has(`2026-${padStudentSequence(profileNumberCursor, 5)}`)) {
+      profileNumberCursor += 1
+    }
+
+    const nextNumber = `2026-${padStudentSequence(profileNumberCursor, 5)}`
+    existingStudentNumbers.add(nextNumber)
+    profileNumberCursor += 1
+    return nextNumber
+  }
+
+  const missingProfileUsers = allStudentUsers.filter((student, index) => !profiledUserIds.has(String(student._id)))
+  const missingProfiles = missingProfileUsers.map((student, profileIndex) => {
+    const yearLevelNumber = ((existingProfiles.length + profileIndex) % 4) + 1
+
+    return {
+      user: student._id,
+      studentNumber: getNextStudentNumber(),
+      course: 'BS Information Technology',
+      section: `BSIT-${yearLevelNumber}${String.fromCharCode(65 + ((existingProfiles.length + profileIndex) % 4))}`,
+      yearLevel: `${yearLevelNumber}${yearLevelNumber === 1 ? 'st' : yearLevelNumber === 2 ? 'nd' : yearLevelNumber === 3 ? 'rd' : 'th'} Year`,
+      admissionDate: new Date('2025-08-01T00:00:00.000Z'),
+      gpa: 0,
+      unitsCompleted: 0,
+      unitsEnrolled: 0,
+    }
+  })
+
+  if (missingProfiles.length > 0) {
+    await StudentProfile.insertMany(missingProfiles, { ordered: true })
+  }
+
   const enrollmentSummary = await ensureBulkCoursesAndEnrollStudents(defaultSemester)
-  await ensureBulkMedicalAndDisciplineRecords()
+  const medicalAndDisciplineSummary = await ensureBulkMedicalAndDisciplineRecords()
+  const enhancementSummary = await ensureBulkEnhancementRecords(defaultSemester)
+  const gradingAndPrerequisiteSummary = await ensureGradeScalesAndPrerequisites(defaultSemester)
 
   await ensureRoleNotifications()
 
   return {
     requested,
+    targetTotal,
     createdUsers: createdUsers.length,
-    createdProfiles: createdProfiles.length,
+    createdProfiles: createdProfiles.length + missingProfiles.length,
     totalStudents: enrollmentSummary.totalStudents,
     coursesEnsured: enrollmentSummary.coursesEnsured,
     coursesNewlyCreated: enrollmentSummary.coursesNewlyCreated,
     enrollmentsCreated: enrollmentSummary.enrollmentsCreated,
+    attendanceRecordsUpserted: enhancementSummary.attendanceRecordsUpserted,
+    counselingRecordsUpserted: enhancementSummary.counselingRecordsUpserted,
+    documentsUpserted: enhancementSummary.documentsUpserted,
+    organizationsUpserted: enhancementSummary.organizationsUpserted,
+    academicHistoryUpserted: enhancementSummary.academicHistoryUpserted,
+    medicalRecordsUpserted: medicalAndDisciplineSummary.medicalUpserted,
+    disciplineRecordsUpserted: medicalAndDisciplineSummary.disciplineUpserted,
+    gradeScalesEnsured: gradingAndPrerequisiteSummary.gradeScalesEnsured,
+    prerequisitesEnsured: gradingAndPrerequisiteSummary.prerequisitesEnsured,
     defaultPassword,
     firstStudentSystemId: createdUsers[0]?.systemId ?? null,
     lastStudentSystemId: createdUsers[createdUsers.length - 1]?.systemId ?? null,

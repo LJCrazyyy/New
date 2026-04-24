@@ -3,11 +3,17 @@ import {
   AcademicHistory,
   AdminProfile,
   AuditLog,
+  Attendance,
+  AttendanceLog,
+  ActivitySubmission,
   CounselingRecord,
   Course,
+  CourseActivity,
+  CoursePrerequisite,
   DisciplineRecord,
   Enrollment,
   FacultyProfile,
+  GradeScale,
   MedicalRecord,
   StudentDocument,
   StudentOrganization,
@@ -94,6 +100,7 @@ export const apiResources: Record<string, ApiResourceConfig> = {
     defaultPopulate: [
       { path: 'student', select: 'systemId name email role status' },
       { path: 'counselor', select: 'systemId name email role status' },
+      { path: 'replyBy', select: 'systemId name email role status' },
     ],
   },
   'discipline-records': {
@@ -124,6 +131,57 @@ export const apiResources: Record<string, ApiResourceConfig> = {
     model: SystemSetting,
     searchableFields: ['key', 'description'],
     defaultSort: 'key',
+  },
+  'attendance': {
+    model: Attendance,
+    searchableFields: ['semester'],
+    defaultSort: '-lastUpdated',
+    defaultPopulate: [
+      { path: 'student', select: 'systemId name email role status' },
+      { path: 'course', select: 'code name section semester' },
+    ],
+  },
+  'attendance-logs': {
+    model: AttendanceLog,
+    searchableFields: ['status', 'remarks'],
+    defaultSort: '-sessionDate',
+    defaultPopulate: [
+      { path: 'attendance', select: 'semester' },
+    ],
+  },
+  'grade-scales': {
+    model: GradeScale,
+    searchableFields: ['institution', 'letterGrade', 'description'],
+    defaultSort: '-maxScore',
+  },
+  'course-prerequisites': {
+    model: CoursePrerequisite,
+    searchableFields: ['minGrade'],
+    defaultSort: '-createdAt',
+    defaultPopulate: [
+      { path: 'course', select: 'code name section semester' },
+      { path: 'prerequisiteCourse', select: 'code name section semester' },
+    ],
+  },
+  'course-activities': {
+    model: CourseActivity,
+    searchableFields: ['title', 'description', 'type', 'status'],
+    defaultSort: '-createdAt',
+    defaultPopulate: [
+      { path: 'course', select: 'code name section semester' },
+      { path: 'faculty', select: 'systemId name email role status' },
+    ],
+  },
+  'activity-submissions': {
+    model: ActivitySubmission,
+    searchableFields: ['status', 'answer', 'feedback'],
+    defaultSort: '-submittedAt',
+    defaultPopulate: [
+      { path: 'activity', select: 'title type dueDate points course faculty' },
+      { path: 'course', select: 'code name section semester' },
+      { path: 'student', select: 'systemId name email role status' },
+      { path: 'gradedBy', select: 'systemId name email role status' },
+    ],
   },
 }
 

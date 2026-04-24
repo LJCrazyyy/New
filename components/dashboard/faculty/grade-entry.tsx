@@ -46,6 +46,13 @@ type DraftGrades = Record<
   }
 >
 
+type GradeScaleEntry = {
+  id: string
+  letterGrade: string
+  minScore: number
+  maxScore: number
+}
+
 const PAGE_SIZE = 20
 
 function toInputValue(value: number | null | undefined) {
@@ -72,8 +79,16 @@ function calculateAverage(prelim: number | null, midterm: number | null, final: 
   return Number((sum / values.length).toFixed(1))
 }
 
-function toGradeLetter(average: number | null) {
+function toGradeLetter(average: number | null, gradeScales: GradeScaleEntry[]) {
   if (average == null) return null
+
+  if (gradeScales.length > 0) {
+    const matchedScale = gradeScales.find((scale) => average >= scale.minScore && average <= scale.maxScore)
+    if (matchedScale) {
+      return matchedScale.letterGrade
+    }
+  }
+
   if (average >= 90) return 'A'
   if (average >= 80) return 'B'
   if (average >= 70) return 'C'
@@ -115,6 +130,43 @@ export function GradeEntry({ courses, enrollments, onRefresh }: GradeEntryProps)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
+  const [gradeScales, setGradeScales] = useState<GradeScaleEntry[]>([])
+
+  useEffect(() => {
+    let mounted = true
+
+    async function loadGradeScales() {
+      try {
+        const response = await fetch('/api/grade-scales?sort=maxScore&order=desc&limit=100')
+        const payload = await response.json()
+
+        if (!response.ok || !payload.success) {
+          return
+        }
+
+        if (mounted) {
+          setGradeScales(
+            (Array.isArray(payload.data) ? payload.data : [])
+              .filter((entry) => typeof entry?.minScore === 'number' && typeof entry?.maxScore === 'number')
+              .map((entry) => ({
+                id: entry.id,
+                letterGrade: String(entry.letterGrade ?? '').toUpperCase(),
+                minScore: Number(entry.minScore),
+                maxScore: Number(entry.maxScore),
+              }))
+          )
+        }
+      } catch {
+        return
+      }
+    }
+
+    loadGradeScales()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     if (!selectedCourseId && courses.length > 0) {
@@ -163,6 +215,8 @@ export function GradeEntry({ courses, enrollments, onRefresh }: GradeEntryProps)
     const final = toNullableNumber(getDraftValue(enrollment, 'final'))
     const average = calculateAverage(prelim, midterm, final)
 
+    const gradeLetter = toGradeLetter(average, gradeScales)
+
     const response = await fetch(`/api/enrollments/${enrollment.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -171,7 +225,7 @@ export function GradeEntry({ courses, enrollments, onRefresh }: GradeEntryProps)
         midterm,
         final,
         average,
-        gradeLetter: toGradeLetter(average),
+        gradeLetter,
       }),
     })
 
@@ -291,7 +345,7 @@ export function GradeEntry({ courses, enrollments, onRefresh }: GradeEntryProps)
                   const midterm = toNullableNumber(getDraftValue(enrollment, 'midterm'))
                   const final = toNullableNumber(getDraftValue(enrollment, 'final'))
                   const average = calculateAverage(prelim, midterm, final)
-                  const letter = toGradeLetter(average)
+                  const letter = toGradeLetter(average, gradeScales)
 
                   return (
                     <tr key={enrollment.id} className="border-b border-gray-800 hover:bg-gray-800/50">

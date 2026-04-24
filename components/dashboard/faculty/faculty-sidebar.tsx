@@ -7,6 +7,8 @@ import {
   CheckSquare,
   BookUser,
   HeartPulse,
+  ClipboardList,
+  MessageCircle,
 } from 'lucide-react'
 
 interface FacultySidebarProps {
@@ -20,11 +22,13 @@ export function FacultySidebar({ activeSection, onSectionChange, facultyName, de
   const sections = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'courses', label: 'My Courses', icon: BookOpen },
+    { id: 'activities', label: 'Activities', icon: ClipboardList },
     { id: 'grades', label: 'Grade Entry', icon: FileText },
     { id: 'roster', label: 'Class Roster', icon: Users },
     { id: 'performance', label: 'Performance', icon: TrendingUp },
     { id: 'attendance', label: 'Attendance', icon: CheckSquare },
     { id: 'guidance-records', label: 'Guidance Records', icon: BookUser },
+    { id: 'counseling-records', label: 'Counseling Records', icon: MessageCircle },
     { id: 'medical-records', label: 'Medical Records', icon: HeartPulse },
   ]
 

@@ -1,7 +1,9 @@
 'use client';
 
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { BookOpen, TrendingUp, Zap } from 'lucide-react';
 
 interface AcademicActivity {
@@ -17,6 +19,20 @@ interface AcademicHistoryProps {
 }
 
 export function AcademicHistory({ activities }: AcademicHistoryProps) {
+  const activitiesByYear = useMemo(() => {
+    return activities.reduce<Record<string, AcademicActivity[]>>((groups, activity) => {
+      const year = new Date(activity.recordedAt).getFullYear().toString();
+      if (!groups[year]) {
+        groups[year] = [];
+      }
+
+      groups[year].push(activity);
+      return groups;
+    }, {});
+  }, [activities]);
+
+  const sortedYears = Object.keys(activitiesByYear).sort((left, right) => Number(right) - Number(left));
+
   const getTypeLabel = (type: AcademicActivity['type']) => {
     switch (type) {
       case 'enrollment':
@@ -63,44 +79,42 @@ export function AcademicHistory({ activities }: AcademicHistoryProps) {
   return (
     <Card className="border-0 shadow-md">
       <CardHeader>
-        <div className="flex items-center gap-2">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-2">
           <BookOpen className="h-5 w-5 text-rose-400" />
           <div>
             <CardTitle>Academic History</CardTitle>
             <CardDescription>Timeline of academic activities and milestones</CardDescription>
           </div>
+          </div>
+          <Button variant="outline" className="border-gray-700 text-gray-200 hover:bg-gray-800" onClick={() => window.print()}>
+            Print / Save as PDF
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
         {activities.length > 0 ? (
-          <div className="space-y-4">
-            {activities.map((activity, idx) => (
-              <div key={activity.id} className="flex gap-4">
-                {/* Timeline line */}
-                {idx !== activities.length - 1 && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-8 h-8 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center">
-                      {getActivityIcon(activity.type)}
+          <div className="space-y-6">
+            {sortedYears.map((year) => (
+              <div key={year} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-lg font-semibold text-white">{year}</h4>
+                  <Badge className="bg-gray-700/30 text-gray-200 hover:bg-gray-700/50">{activitiesByYear[year].length} activities</Badge>
+                </div>
+                <div className="space-y-4 border-l border-gray-700 pl-4">
+                  {activitiesByYear[year].map((activity) => (
+                    <div key={activity.id} className="relative pl-6">
+                      <div className="absolute left-0 top-1 h-3 w-3 rounded-full bg-rose-400" />
+                      <div className="rounded-xl border border-gray-700 bg-gray-900/60 p-4">
+                        <div className="flex items-center justify-between gap-3 mb-2">
+                          <h4 className="font-semibold text-white">{activity.description}</h4>
+                          <Badge className={getActivityColor(activity.type)}>{getTypeLabel(activity.type)}</Badge>
+                        </div>
+                        <p className="text-sm text-gray-400 mb-2">{new Date(activity.recordedAt).toLocaleDateString()}</p>
+                        <p className="text-sm text-gray-300 leading-6">{activity.details}</p>
+                      </div>
                     </div>
-                    <div className="w-0.5 h-12 bg-gray-700 mt-2" />
-                  </div>
-                )}
-                {idx === activities.length - 1 && (
-                  <div className="flex flex-col items-center">
-                    <div className="w-8 h-8 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                  </div>
-                )}
-
-                {/* Activity content */}
-                <div className="flex-1 pt-1 pb-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-semibold text-white">{activity.description}</h4>
-                    <Badge className={getActivityColor(activity.type)}>{getTypeLabel(activity.type)}</Badge>
-                  </div>
-                  <p className="text-sm text-gray-400 mb-1">{new Date(activity.recordedAt).toLocaleDateString()}</p>
-                  <p className="text-sm text-gray-300">{activity.details}</p>
+                  ))}
                 </div>
               </div>
             ))}

@@ -9,7 +9,9 @@ import { GradeEntry } from './faculty/grade-entry'
 import { ClassRoster } from './faculty/class-roster'
 import { StudentPerformance } from './faculty/student-performance'
 import { AttendanceTracking } from './faculty/attendance-tracking'
+import { CourseActivities } from './faculty/course-activities'
 import { GuidanceRecordsFaculty } from './faculty/guidance-records'
+import { CounselingRecordsFaculty } from './faculty/counseling-records-faculty'
 import { MedicalRecordsFaculty } from './faculty/medical-records'
 import type { UserData } from '@/components/login-page'
 
@@ -66,6 +68,7 @@ type FacultyDashboardData = {
     final: number | null
     average: number | null
     student?: {
+      id?: string
       systemId?: string
       name?: string
       email?: string
@@ -144,6 +147,13 @@ export function FacultyDashboard({ currentUser, onLogout }: FacultyDashboardProp
           )}
           
           {activeSection === 'courses' && <CourseManagement courses={data?.assignedCourses ?? []} fullWidth />}
+          {activeSection === 'activities' && (
+            <CourseActivities
+              facultyId={currentUser.id}
+              courses={data?.assignedCourses ?? []}
+              enrollments={data?.enrollments ?? []}
+            />
+          )}
           {activeSection === 'grades' && (
             <GradeEntry
               courses={data?.assignedCourses ?? []}
@@ -151,11 +161,18 @@ export function FacultyDashboard({ currentUser, onLogout }: FacultyDashboardProp
               onRefresh={loadFacultyData}
             />
           )}
-          {activeSection === 'roster' && <ClassRoster students={data?.classRoster ?? []} />}
+          {activeSection === 'roster' && <ClassRoster courses={data?.assignedCourses ?? []} enrollments={data?.enrollments ?? []} />}
           {activeSection === 'performance' && <StudentPerformance performance={data?.studentPerformance ?? []} />}
-          {activeSection === 'attendance' && <AttendanceTracking students={data?.classRoster ?? []} />}
-          {activeSection === 'guidance-records' && <GuidanceRecordsFaculty />}
-          {activeSection === 'medical-records' && <MedicalRecordsFaculty />}
+          {activeSection === 'attendance' && (
+            <AttendanceTracking
+              facultyId={currentUser.id}
+              courses={data?.assignedCourses ?? []}
+              enrollments={data?.enrollments ?? []}
+            />
+          )}
+          {activeSection === 'guidance-records' && <GuidanceRecordsFaculty facultyId={currentUser.id} mode="guidance" />}
+          {activeSection === 'counseling-records' && <CounselingRecordsFaculty facultyId={currentUser.id} />}
+          {activeSection === 'medical-records' && <MedicalRecordsFaculty facultyId={currentUser.id} />}
         </div>
       </main>
     </div>

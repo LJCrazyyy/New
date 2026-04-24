@@ -21,8 +21,8 @@ export async function POST(request: Request) {
       success: true,
       message:
         count === 0
-          ? `Enrollment sync complete. ${result.totalStudents} students processed.`
-          : `${result.createdUsers} student accounts created successfully.`,
+          ? `Full data sync complete. ${result.totalStudents} students processed.`
+          : `Target sync complete for ${result.targetTotal} students. ${result.createdUsers} new accounts created.`,
       result,
     })
   } catch (error) {

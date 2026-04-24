@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { RoleSelector } from '@/components/role-selector'
 import { LoginPage, type UserData } from '@/components/login-page'
 import { StudentDashboard } from '@/components/dashboard/student-dashboard'
@@ -9,11 +9,32 @@ import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 
 type AppState = 'role-select' | 'login' | 'dashboard'
 type UserRole = 'student' | 'faculty' | 'admin'
+const SESSION_STORAGE_KEY = 'campus.currentUser'
 
 export default function Page() {
   const [appState, setAppState] = useState<AppState>('role-select')
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
+
+  useEffect(() => {
+    try {
+      const rawSession = localStorage.getItem(SESSION_STORAGE_KEY)
+      if (!rawSession) {
+        return
+      }
+
+      const parsedSession = JSON.parse(rawSession) as UserData
+      if (!parsedSession?.id || !parsedSession?.role) {
+        return
+      }
+
+      setCurrentUser(parsedSession)
+      setSelectedRole(parsedSession.role)
+      setAppState('dashboard')
+    } catch {
+      localStorage.removeItem(SESSION_STORAGE_KEY)
+    }
+  }, [])
 
   const handleRoleSelect = (role: UserRole) => {
     setSelectedRole(role)
@@ -22,6 +43,8 @@ export default function Page() {
 
   const handleLoginSuccess = (user: UserData) => {
     setCurrentUser(user)
+    setSelectedRole(user.role)
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user))
     setAppState('dashboard')
   }
 
@@ -33,6 +56,7 @@ export default function Page() {
   const handleLogout = () => {
     setCurrentUser(null)
     setSelectedRole(null)
+    localStorage.removeItem(SESSION_STORAGE_KEY)
     setAppState('role-select')
   }
 
