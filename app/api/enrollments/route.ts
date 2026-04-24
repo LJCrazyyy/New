@@ -125,8 +125,8 @@ export async function POST(request: NextRequest) {
 
           if (!completedEnrollment) {
             return {
-              code: prerequisite.prerequisiteCourse?.code,
-              name: prerequisite.prerequisiteCourse?.name,
+              code: (prerequisite.prerequisiteCourse as any)?.code,
+              name: (prerequisite.prerequisiteCourse as any)?.name,
               minGrade: prerequisite.minGrade,
               reason: 'not-completed',
             }
@@ -134,8 +134,8 @@ export async function POST(request: NextRequest) {
 
           if (!isPassingByMinGrade(completedEnrollment.gradeLetter, prerequisite.minGrade)) {
             return {
-              code: prerequisite.prerequisiteCourse?.code,
-              name: prerequisite.prerequisiteCourse?.name,
+              code: (prerequisite.prerequisiteCourse as any)?.code,
+              name: (prerequisite.prerequisiteCourse as any)?.name,
               minGrade: prerequisite.minGrade,
               actualGrade: completedEnrollment.gradeLetter,
               reason: 'min-grade-not-met',

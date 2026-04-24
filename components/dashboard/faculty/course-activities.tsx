@@ -68,6 +68,7 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
   const [dueDate, setDueDate] = useState('')
   const [points, setPoints] = useState('100')
   const [contentUrl, setContentUrl] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
@@ -140,6 +141,24 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
       .filter(Boolean)
   }, [enrollments, selectedCourseId])
 
+  const uploadResourceFile = async (file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('category', 'course-activities')
+
+    const response = await fetch('/api/uploads', {
+      method: 'POST',
+      body: formData,
+    })
+
+    const payload = await response.json()
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.message || 'Unable to upload file.')
+    }
+
+    return payload.data.fileUrl as string
+  }
+
   const createActivity = async () => {
     if (!selectedCourseId || !title.trim()) {
       setError('Course and title are required.')
@@ -150,6 +169,12 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
     setError('')
 
     try {
+      let resourceUrl = contentUrl.trim()
+
+      if (selectedFile) {
+        resourceUrl = await uploadResourceFile(selectedFile)
+      }
+
       const response = await fetch('/api/course-activities', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -161,7 +186,7 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
           type,
           dueDate: dueDate || undefined,
           points: Number(points) || 0,
-          contentUrl: contentUrl.trim(),
+          contentUrl: resourceUrl,
           status: 'active',
         }),
       })
@@ -197,6 +222,7 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
       setDueDate('')
       setPoints('100')
       setContentUrl('')
+      setSelectedFile(null)
       await loadActivities()
     } catch (createError) {
       setError(createError instanceof Error ? createError.message : 'Failed to create activity.')
@@ -283,7 +309,29 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           <Input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Description" className="bg-gray-800 border-gray-700 text-white" />
-          <Input value={contentUrl} onChange={(event) => setContentUrl(event.target.value)} placeholder="Lecture/Resource URL (optional)" className="bg-gray-800 border-gray-700 text-white" />
+          <div>
+            <label className="mb-1 block text-xs text-gray-400">Lecture file or resource URL (optional)</label>
+            <label className="relative flex h-12 items-center justify-between rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white hover:border-cyan-500">
+              <span>{selectedFile ? selectedFile.name : 'Choose a file to upload'}</span>
+              <span className="text-cyan-300">Browse</span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.jpg,.jpeg,.png,.txt,.zip"
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0] ?? null
+                  setSelectedFile(file)
+                }}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </label>
+            <Input
+              value={contentUrl}
+              onChange={(event) => setContentUrl(event.target.value)}
+              placeholder="Resource URL (optional)"
+              className="mt-2 bg-gray-800 border-gray-700 text-white"
+            />
+            {selectedFile && <p className="mt-1 text-xs text-gray-300">Selected file: {selectedFile.name}</p>}
+          </div>
         </div>
         <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={createActivity} disabled={isSaving || isLoading}>
           {isSaving ? 'Saving...' : 'Post Activity'}

@@ -26,6 +26,7 @@ type DocumentFormState = {
   title: string;
   fileName: string;
   fileUrl: string;
+  selectedFile: File | null;
   category: string;
   status: string;
 };
@@ -34,6 +35,7 @@ const initialFormState: DocumentFormState = {
   title: '',
   fileName: '',
   fileUrl: '',
+  selectedFile: null,
   category: 'Other',
   status: 'pending',
 };
@@ -93,9 +95,29 @@ export function StudentDocuments({ studentId, documents }: StudentDocumentsProps
       title: doc.title,
       fileName: doc.fileName,
       fileUrl: doc.fileUrl,
+      selectedFile: null,
       category: doc.category,
       status: doc.status,
     });
+  };
+
+  const uploadFile = async (file: File) => {
+    const fileData = new FormData();
+    fileData.append('student', studentId);
+    fileData.append('file', file);
+
+    const response = await fetch('/api/student-documents/upload', {
+      method: 'POST',
+      body: fileData,
+    });
+
+    const payload = await response.json();
+
+    if (!response.ok || !payload.success) {
+      throw new Error(payload.message || 'Unable to upload file.');
+    }
+
+    return payload.data as { fileUrl: string };
   };
 
   const saveDocument = async () => {
@@ -103,8 +125,8 @@ export function StudentDocuments({ studentId, documents }: StudentDocumentsProps
       return;
     }
 
-    if (!form.title.trim() || !form.fileName.trim() || !form.fileUrl.trim()) {
-      setError('Title, file name, and file URL are required.');
+    if (!form.title.trim() || !form.fileName.trim() || (!form.fileUrl.trim() && !form.selectedFile)) {
+      setError('Title, file name, and a file upload are required.');
       return;
     }
 
@@ -112,6 +134,17 @@ export function StudentDocuments({ studentId, documents }: StudentDocumentsProps
     setError('');
 
     try {
+      let fileUrl = form.fileUrl;
+
+      if (form.selectedFile) {
+        const uploadPayload = await uploadFile(form.selectedFile);
+        fileUrl = uploadPayload.fileUrl;
+      }
+
+      if (!fileUrl) {
+        throw new Error('Unable to determine uploaded file URL.');
+      }
+
       const endpoint = editingId ? `/api/student-documents/${editingId}` : '/api/student-documents';
       const method = editingId ? 'PATCH' : 'POST';
 
@@ -122,7 +155,7 @@ export function StudentDocuments({ studentId, documents }: StudentDocumentsProps
           student: studentId,
           title: form.title.trim(),
           fileName: form.fileName.trim(),
-          fileUrl: form.fileUrl.trim(),
+          fileUrl: fileUrl.trim(),
           category: form.category,
           status: form.status,
         }),
@@ -212,12 +245,34 @@ export function StudentDocuments({ studentId, documents }: StudentDocumentsProps
             className="bg-gray-800 border-gray-700 text-white"
             placeholder="File name"
           />
-          <Input
-            value={form.fileUrl}
-            onChange={(event) => setForm((previous) => ({ ...previous, fileUrl: event.target.value }))}
-            className="md:col-span-2 bg-gray-800 border-gray-700 text-white"
-            placeholder="File URL"
-          />
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-xs text-gray-400">Upload file</label>
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+              onChange={(event) => {
+                const file = event.currentTarget.files?.[0] ?? null;
+                setForm((previous) => ({
+                  ...previous,
+                  selectedFile: file,
+                  fileName: file?.name ?? previous.fileName,
+                }));
+              }}
+              className="w-full rounded-md border border-gray-700 bg-gray-800 px-2 py-2 text-sm text-white"
+            />
+            {form.selectedFile ? (
+              <p className="mt-1 text-xs text-gray-300">Selected: {form.selectedFile.name}</p>
+            ) : form.fileUrl ? (
+              <a
+                target="_blank"
+                rel="noreferrer"
+                href={form.fileUrl}
+                className="mt-1 block text-xs text-cyan-300 hover:text-cyan-200"
+              >
+                Current file: {form.fileName}
+              </a>
+            ) : null}
+          </div>
           <select
             value={form.category}
             onChange={(event) => setForm((previous) => ({ ...previous, category: event.target.value }))}

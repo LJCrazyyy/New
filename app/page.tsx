@@ -7,7 +7,7 @@ import { StudentDashboard } from '@/components/dashboard/student-dashboard'
 import { FacultyDashboard } from '@/components/dashboard/faculty-dashboard'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL=https://new-production-dfd5.up.railway.app(/\/$/, '') ?? ''
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ?? ''
 
 type AppState = 'role-select' | 'login' | 'dashboard'
 type UserRole = 'student' | 'faculty' | 'admin'
