@@ -84,15 +84,16 @@ export function FacultyProfileManagement() {
       const profileMap = new Map<string, any>()
 
       facultyProfilesData.forEach((profile) => {
-        if (profile.user?.id) {
-          profileMap.set(profile.user.id, profile)
+        const userId = profile.user?.id ?? profile.user?._id
+        if (userId) {
+          profileMap.set(String(userId), profile)
         }
       })
 
       const combinedProfiles = facultyUsersData.map((faculty) => {
         const profile = profileMap.get(faculty.id)
         return {
-          id: profile?.id,
+          id: profile?.id ?? profile?._id,
           employeeNumber: profile?.employeeNumber ?? '',
           department: profile?.department ?? '',
           title: profile?.title ?? '',

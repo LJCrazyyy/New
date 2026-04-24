@@ -203,7 +203,7 @@ export function serializeRecord(record: any): any {
       _id?: { toString?: () => string } | string
     }
 
-    return {
+    const serializedRecord = {
       ...plainRecord,
       id:
         typeof plainRecord._id === 'object' && plainRecord._id && 'toString' in plainRecord._id
@@ -212,6 +212,14 @@ export function serializeRecord(record: any): any {
             ? plainRecord._id
             : plainRecord.id,
     }
+
+    return serializeRecord(serializedRecord)
+  }
+
+  if (typeof record === 'object' && record.constructor === Object) {
+    return Object.fromEntries(
+      Object.entries(record).map(([key, value]) => [key, serializeRecord(value)])
+    )
   }
 
   return record
