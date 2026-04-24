@@ -64,6 +64,12 @@ export function GuidanceRecordManagement() {
   const [form, setForm] = useState<GuidanceFormState>(initialForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<GuidanceFormState>(initialEditForm)
+  const [createStudentQuery, setCreateStudentQuery] = useState('')
+  const [editStudentQuery, setEditStudentQuery] = useState('')
+  const [createStudentSuggestionsOpen, setCreateStudentSuggestionsOpen] = useState(false)
+  const [editStudentSuggestionsOpen, setEditStudentSuggestionsOpen] = useState(false)
+
+  const formatStudentLabel = (student: UserOption) => `${student.name} (${student.systemId})`
 
   const loadData = async () => {
     setIsLoading(true)
@@ -85,6 +91,8 @@ export function GuidanceRecordManagement() {
 
       setRecords(Array.isArray(recordsPayload.data) ? recordsPayload.data : [])
       setStudents(studentData.map((student) => ({ id: student.id, name: student.name, systemId: student.systemId })))
+      setCreateStudentQuery('')
+      setCreateStudentSuggestionsOpen(false)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load module data.')
     } finally {
@@ -140,6 +148,8 @@ export function GuidanceRecordManagement() {
       }
 
       setForm(initialForm)
+      setCreateStudentQuery('')
+      setCreateStudentSuggestionsOpen(false)
       await loadData()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to create guidance record.')
@@ -182,11 +192,15 @@ export function GuidanceRecordManagement() {
       nextStep: record.nextStep ?? '',
       sessionDate: record.sessionDate ? record.sessionDate.slice(0, 10) : '',
     })
+    setEditStudentQuery(record.student ? `${record.student.name} (${record.student.systemId})` : '')
+    setEditStudentSuggestionsOpen(false)
   }
 
   const onCancelEdit = () => {
     setEditingId(null)
     setEditForm(initialEditForm)
+    setEditStudentQuery('')
+    setEditStudentSuggestionsOpen(false)
   }
 
   const onSaveEdit = async () => {
@@ -243,18 +257,41 @@ export function GuidanceRecordManagement() {
         </CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-2" onSubmit={onCreateRecord}>
-            <select
-              className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white"
-              value={form.student}
-              onChange={(event) => setForm((prev) => ({ ...prev, student: event.target.value }))}
+            <div
+              className="relative"
+              onBlur={() => setTimeout(() => setCreateStudentSuggestionsOpen(false), 100)}
             >
-              <option value="">Select Student</option>
-              {students.map((student) => (
-                <option key={student.id} value={student.id}>
-                  {student.name} ({student.systemId})
-                </option>
-              ))}
-            </select>
+              <Input
+                value={createStudentQuery}
+                onFocus={() => setCreateStudentSuggestionsOpen(Boolean(createStudentQuery.trim()))}
+                onChange={(event) => {
+                  const value = event.target.value
+                  setCreateStudentQuery(value)
+                  setForm((prev) => ({ ...prev, student: '' }))
+                  setCreateStudentSuggestionsOpen(Boolean(value.trim()))
+                }}
+                placeholder="Search student by name or ID"
+                className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white placeholder-gray-500"
+              />
+              {createStudentSuggestionsOpen && createStudentSuggestions.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                  {createStudentSuggestions.map((student) => (
+                    <button
+                      key={student.id}
+                      type="button"
+                      className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
+                      onMouseDown={() => {
+                        setForm((prev) => ({ ...prev, student: student.id }))
+                        setCreateStudentQuery(formatStudentLabel(student))
+                        setCreateStudentSuggestionsOpen(false)
+                      }}
+                    >
+                      {formatStudentLabel(student)}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <Input
               value={form.topic}
@@ -319,18 +356,41 @@ export function GuidanceRecordManagement() {
                   <div className="flex-1">
                     {editingId === record.id ? (
                       <div className="grid gap-2 md:grid-cols-2">
-                        <select
-                          className="h-9 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
-                          value={editForm.student}
-                          onChange={(event) => setEditForm((prev) => ({ ...prev, student: event.target.value }))}
+                        <div
+                          className="relative"
+                          onBlur={() => setTimeout(() => setEditStudentSuggestionsOpen(false), 100)}
                         >
-                          <option value="">Select Student</option>
-                          {students.map((student) => (
-                            <option key={student.id} value={student.id}>
-                              {student.name} ({student.systemId})
-                            </option>
-                          ))}
-                        </select>
+                          <Input
+                            value={editStudentQuery}
+                            onFocus={() => setEditStudentSuggestionsOpen(Boolean(editStudentQuery.trim()))}
+                            onChange={(event) => {
+                              const value = event.target.value
+                              setEditStudentQuery(value)
+                              setEditForm((prev) => ({ ...prev, student: '' }))
+                              setEditStudentSuggestionsOpen(Boolean(value.trim()))
+                            }}
+                            placeholder="Search student by name or ID"
+                            className="h-9 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white placeholder-gray-500"
+                          />
+                          {editStudentSuggestionsOpen && editStudentSuggestions.length > 0 && (
+                            <div className="absolute z-10 mt-1 max-h-36 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                              {editStudentSuggestions.map((student) => (
+                                <button
+                                  key={student.id}
+                                  type="button"
+                                  className="w-full px-2 py-1.5 text-left text-xs text-gray-200 hover:bg-gray-800"
+                                  onMouseDown={() => {
+                                    setEditForm((prev) => ({ ...prev, student: student.id }))
+                                    setEditStudentQuery(formatStudentLabel(student))
+                                    setEditStudentSuggestionsOpen(false)
+                                  }}
+                                >
+                                  {formatStudentLabel(student)}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <Input
                           value={editForm.topic}
                           onChange={(event) => setEditForm((prev) => ({ ...prev, topic: event.target.value }))}

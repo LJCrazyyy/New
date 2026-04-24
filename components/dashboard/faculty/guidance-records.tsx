@@ -55,12 +55,17 @@ export function GuidanceRecordsFaculty({ facultyId, mode = 'guidance' }: Guidanc
   const [error, setError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState('')
+  const [createStudentQuery, setCreateStudentQuery] = useState('')
+  const [createStudentSuggestionsOpen, setCreateStudentSuggestionsOpen] = useState(false)
   const [sessionDate, setSessionDate] = useState(new Date().toISOString().slice(0, 10))
   const [topic, setTopic] = useState('Academic Planning')
   const [summary, setSummary] = useState('')
   const [nextStep, setNextStep] = useState('')
   const [students, setStudents] = useState<Array<{ id: string; name: string; systemId: string }>>([])
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({})
+
+  const formatStudentLabel = (student: { id: string; name: string; systemId: string }) =>
+    `${student.name} (${student.systemId})`
 
   const loadViolations = async () => {
     setIsLoading(true)
@@ -131,6 +136,8 @@ export function GuidanceRecordsFaculty({ facultyId, mode = 'guidance' }: Guidanc
         if (mounted) {
           setStudents(mappedStudents)
           setSelectedStudentId(mappedStudents[0]?.id ?? '')
+          setCreateStudentQuery(mappedStudents[0] ? formatStudentLabel(mappedStudents[0]) : '')
+          setCreateStudentSuggestionsOpen(false)
         }
       } catch {
         if (mounted) {
@@ -145,6 +152,15 @@ export function GuidanceRecordsFaculty({ facultyId, mode = 'guidance' }: Guidanc
       mounted = false
     }
   }, [mode])
+
+  const createStudentSuggestions = useMemo(() => {
+    const term = createStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : []
+
+    return source.slice(0, 8)
+  }, [createStudentQuery, students])
 
   const createRecord = async () => {
     if (!selectedStudentId || !summary.trim() || !nextStep.trim()) {
@@ -343,17 +359,41 @@ export function GuidanceRecordsFaculty({ facultyId, mode = 'guidance' }: Guidanc
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
-          <select
-            value={selectedStudentId}
-            onChange={(event) => setSelectedStudentId(event.target.value)}
-            className="md:col-span-2 h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white"
+          <div
+            className="relative md:col-span-2"
+            onBlur={() => setTimeout(() => setCreateStudentSuggestionsOpen(false), 100)}
           >
-            {students.map((student) => (
-              <option key={student.id} value={student.id}>
-                {student.name} ({student.systemId})
-              </option>
-            ))}
-          </select>
+            <Input
+              value={createStudentQuery}
+              onFocus={() => setCreateStudentSuggestionsOpen(Boolean(createStudentQuery.trim()))}
+              onChange={(event) => {
+                const value = event.target.value
+                setCreateStudentQuery(value)
+                setSelectedStudentId('')
+                setCreateStudentSuggestionsOpen(Boolean(value.trim()))
+              }}
+              placeholder="Search student by name or ID"
+              className="h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white placeholder-gray-500"
+            />
+            {createStudentSuggestionsOpen && createStudentSuggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                {createStudentSuggestions.map((student) => (
+                  <button
+                    key={student.id}
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
+                    onMouseDown={() => {
+                      setSelectedStudentId(student.id)
+                      setCreateStudentQuery(formatStudentLabel(student))
+                      setCreateStudentSuggestionsOpen(false)
+                    }}
+                  >
+                    {formatStudentLabel(student)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <select
             value={topic}
             onChange={(event) => setTopic(event.target.value)}

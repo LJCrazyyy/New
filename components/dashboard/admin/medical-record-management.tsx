@@ -69,6 +69,8 @@ export function MedicalRecordManagement() {
   const [editForm, setEditForm] = useState<MedicalFormState>(initialEditForm)
   const [createStudentQuery, setCreateStudentQuery] = useState('')
   const [editStudentQuery, setEditStudentQuery] = useState('')
+  const [createStudentSuggestionsOpen, setCreateStudentSuggestionsOpen] = useState(false)
+  const [editStudentSuggestionsOpen, setEditStudentSuggestionsOpen] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
 
   const formatStudentLabel = (student: UserOption) => `${student.name} (${student.systemId})`
@@ -108,7 +110,7 @@ export function MedicalRecordManagement() {
     const term = createStudentQuery.trim().toLowerCase()
     const source = term
       ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
-      : students
+      : []
 
     return source.slice(0, 8)
   }, [createStudentQuery, students])
@@ -117,7 +119,7 @@ export function MedicalRecordManagement() {
     const term = editStudentQuery.trim().toLowerCase()
     const source = term
       ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
-      : students
+      : []
 
     return source.slice(0, 8)
   }, [editStudentQuery, students])
@@ -178,6 +180,8 @@ export function MedicalRecordManagement() {
       }
 
       setForm(initialForm)
+      setCreateStudentQuery('')
+      setCreateStudentSuggestionsOpen(false)
       await loadData()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Unable to create medical record.')
@@ -222,12 +226,14 @@ export function MedicalRecordManagement() {
       recordedAt: record.recordedAt ? record.recordedAt.slice(0, 10) : '',
     })
     setEditStudentQuery(record.student ? `${record.student.name} (${record.student.systemId})` : '')
+    setEditStudentSuggestionsOpen(false)
   }
 
   const onCancelEdit = () => {
     setEditingId(null)
     setEditForm(initialEditForm)
     setEditStudentQuery('')
+    setEditStudentSuggestionsOpen(false)
   }
 
   const onSaveEdit = async () => {
@@ -285,31 +291,40 @@ export function MedicalRecordManagement() {
         </CardHeader>
         <CardContent>
           <form className="grid gap-3 md:grid-cols-2" onSubmit={onCreateRecord}>
-            <div className="relative">
+            <div
+              className="relative"
+              onBlur={() => setTimeout(() => setCreateStudentSuggestionsOpen(false), 100)}
+            >
               <Input
                 value={createStudentQuery}
+                onFocus={() => setCreateStudentSuggestionsOpen(Boolean(createStudentQuery.trim()))}
                 onChange={(event) => {
-                  setCreateStudentQuery(event.target.value)
+                  const value = event.target.value
+                  setCreateStudentQuery(value)
                   setForm((prev) => ({ ...prev, student: '' }))
+                  setCreateStudentSuggestionsOpen(Boolean(value.trim()))
                 }}
                 placeholder="Search student by name or ID"
                 className="bg-gray-800 border-gray-700 text-white placeholder-gray-500"
               />
-              <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
-                {createStudentSuggestions.map((student) => (
-                  <button
-                    key={student.id}
-                    type="button"
-                    className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
-                    onClick={() => {
-                      setForm((prev) => ({ ...prev, student: student.id }))
-                      setCreateStudentQuery(formatStudentLabel(student))
-                    }}
-                  >
-                    {formatStudentLabel(student)}
-                  </button>
-                ))}
-              </div>
+              {createStudentSuggestionsOpen && createStudentSuggestions.length > 0 && (
+                <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                  {createStudentSuggestions.map((student) => (
+                    <button
+                      key={student.id}
+                      type="button"
+                      onMouseDown={() => {
+                        setForm((prev) => ({ ...prev, student: student.id }))
+                        setCreateStudentQuery(formatStudentLabel(student))
+                        setCreateStudentSuggestionsOpen(false)
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
+                    >
+                      {formatStudentLabel(student)}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Input
@@ -413,31 +428,40 @@ export function MedicalRecordManagement() {
                   <div className="flex-1">
                     {editingId === record.id ? (
                       <div className="grid gap-2 md:grid-cols-2">
-                        <div className="relative">
+                        <div
+                          className="relative"
+                          onBlur={() => setTimeout(() => setEditStudentSuggestionsOpen(false), 100)}
+                        >
                           <Input
                             value={editStudentQuery}
+                            onFocus={() => setEditStudentSuggestionsOpen(Boolean(editStudentQuery.trim()))}
                             onChange={(event) => {
-                              setEditStudentQuery(event.target.value)
+                              const value = event.target.value
+                              setEditStudentQuery(value)
                               setEditForm((prev) => ({ ...prev, student: '' }))
+                              setEditStudentSuggestionsOpen(Boolean(value.trim()))
                             }}
                             placeholder="Search student by name or ID"
                             className="h-9 bg-gray-800 border-gray-700 text-white placeholder-gray-500"
                           />
-                          <div className="absolute z-10 mt-1 max-h-36 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
-                            {editStudentSuggestions.map((student) => (
-                              <button
-                                key={student.id}
-                                type="button"
-                                className="w-full px-2 py-1.5 text-left text-xs text-gray-200 hover:bg-gray-800"
-                                onClick={() => {
-                                  setEditForm((prev) => ({ ...prev, student: student.id }))
-                                  setEditStudentQuery(formatStudentLabel(student))
-                                }}
-                              >
-                                {formatStudentLabel(student)}
-                              </button>
-                            ))}
-                          </div>
+                          {editStudentSuggestionsOpen && editStudentSuggestions.length > 0 && (
+                            <div className="absolute z-10 mt-1 max-h-36 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                              {editStudentSuggestions.map((student) => (
+                                <button
+                                  key={student.id}
+                                  type="button"
+                                  onMouseDown={() => {
+                                    setEditForm((prev) => ({ ...prev, student: student.id }))
+                                    setEditStudentQuery(formatStudentLabel(student))
+                                    setEditStudentSuggestionsOpen(false)
+                                  }}
+                                  className="w-full px-2 py-1.5 text-left text-xs text-gray-200 hover:bg-gray-800"
+                                >
+                                  {formatStudentLabel(student)}
+                                </button>
+                              ))}
+                            </div>
+                          )}
                         </div>
                         <Input
                           value={editForm.title}

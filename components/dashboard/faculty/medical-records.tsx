@@ -33,6 +33,7 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
   const [isSaving, setIsSaving] = useState(false)
   const [selectedStudentId, setSelectedStudentId] = useState('')
   const [createStudentQuery, setCreateStudentQuery] = useState('')
+  const [createStudentSuggestionsOpen, setCreateStudentSuggestionsOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('condition')
   const [status, setStatus] = useState('active')
@@ -71,7 +72,7 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
     const term = createStudentQuery.trim().toLowerCase()
     const source = term
       ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
-      : students
+      : []
 
     return source.slice(0, 8)
   }, [createStudentQuery, students])
@@ -95,6 +96,7 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
           setStudents(mappedStudents)
           setSelectedStudentId(mappedStudents[0]?.id ?? '')
           setCreateStudentQuery(mappedStudents[0] ? formatStudentLabel(mappedStudents[0]) : '')
+          setCreateStudentSuggestionsOpen(false)
         }
       } catch {
         if (mounted) {
@@ -196,31 +198,40 @@ export function MedicalRecordsFaculty({ facultyId }: MedicalRecordsFacultyProps)
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
-          <div className="relative md:col-span-2">
+          <div
+            className="relative md:col-span-2"
+            onBlur={() => setTimeout(() => setCreateStudentSuggestionsOpen(false), 100)}
+          >
             <Input
               value={createStudentQuery}
+              onFocus={() => setCreateStudentSuggestionsOpen(Boolean(createStudentQuery.trim()))}
               onChange={(event) => {
-                setCreateStudentQuery(event.target.value)
+                const value = event.target.value
+                setCreateStudentQuery(value)
                 setSelectedStudentId('')
+                setCreateStudentSuggestionsOpen(Boolean(value.trim()))
               }}
               placeholder="Search student by name or ID"
               className="h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white placeholder-gray-500"
             />
-            <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
-              {createStudentSuggestions.map((student) => (
-                <button
-                  key={student.id}
-                  type="button"
-                  className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
-                  onClick={() => {
-                    setSelectedStudentId(student.id)
-                    setCreateStudentQuery(formatStudentLabel(student))
-                  }}
-                >
-                  {formatStudentLabel(student)}
-                </button>
-              ))}
-            </div>
+            {createStudentSuggestionsOpen && createStudentSuggestions.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-40 w-full overflow-y-auto rounded-md border border-gray-700 bg-gray-900/95 shadow-lg">
+                {createStudentSuggestions.map((student) => (
+                  <button
+                    key={student.id}
+                    type="button"
+                    className="w-full px-3 py-2 text-left text-xs text-gray-200 hover:bg-gray-800"
+                    onMouseDown={() => {
+                      setSelectedStudentId(student.id)
+                      setCreateStudentQuery(formatStudentLabel(student))
+                      setCreateStudentSuggestionsOpen(false)
+                    }}
+                  >
+                    {formatStudentLabel(student)}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           <Input
             value={title}
