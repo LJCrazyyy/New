@@ -91,10 +91,6 @@ function resolveNotificationLink(link?: string) {
     return ''
   }
 
-  if (normalized.startsWith('/dashboard/')) {
-    return ''
-  }
-
   return normalized
 }
 

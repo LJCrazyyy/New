@@ -23,6 +23,7 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
   const sections = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'courses', label: 'My Courses', icon: BookOpen },
+    { id: 'activities', label: 'Activities', icon: FileText },
     { id: 'grades', label: 'Grades', icon: FileText },
     { id: 'academic-history', label: 'Academic History', icon: History },
     { id: 'health', label: 'Medical Records', icon: Heart },

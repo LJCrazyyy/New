@@ -59,20 +59,29 @@ function calculateGradeRemark(average: number | null) {
 export async function GET(_request: NextRequest, context: RouteContext) {
   const { studentId } = await context.params
 
-  if (!studentId || !isValidObjectId(studentId)) {
+  if (!studentId) {
     return apiError('Invalid student id.', 400)
   }
 
   try {
     await connectToDatabase()
 
-    const studentUser = await User.findOne({ _id: studentId, role: 'student' })
+    const normalizedStudentId = studentId.trim()
+    const normalizedStudentEmail = normalizedStudentId.toLowerCase()
+    const userLookup = isValidObjectId(normalizedStudentId)
+      ? { _id: normalizedStudentId, role: 'student' }
+      : {
+          role: 'student',
+          $or: [{ systemId: normalizedStudentId }, { email: normalizedStudentEmail }],
+        }
+
+    const studentUser = await User.findOne(userLookup)
 
     if (!studentUser) {
       return apiError('Student account not found.', 404)
     }
 
-    const [studentProfile, currentSemesterSetting, currentEnrollments, completedEnrollments, history, medicalRecords, counselingRecords, disciplineRecords, documents, organizations] = await Promise.all([
+    const [studentProfile, currentSemesterSetting, currentEnrollments, completedEnrollments, allEnrollments, history, medicalRecords, counselingRecords, disciplineRecords, documents, organizations] = await Promise.all([
       StudentProfile.findOne({ user: studentUser._id }),
       SystemSetting.findOne({ key: 'currentSemester' }),
       Enrollment.find({ student: studentUser._id, status: { $in: ['enrolled', 'pending'] } })
@@ -86,6 +95,16 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           },
         ]),
       Enrollment.find({ student: studentUser._id, average: { $ne: null } })
+        .sort({ createdAt: -1 })
+        .populate([
+          { path: 'student', select: 'systemId name email role status' },
+          {
+            path: 'course',
+            select: 'code name section semester schedule room units enrolledCount capacity faculty',
+            populate: { path: 'faculty', select: 'systemId name email role status' },
+          },
+        ]),
+      Enrollment.find({ student: studentUser._id })
         .sort({ createdAt: -1 })
         .populate([
           { path: 'student', select: 'systemId name email role status' },
@@ -118,18 +137,39 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const profileUnitsEnrolled = studentProfile?.unitsEnrolled ?? 0
     const serializedCurrentEnrollments = serializeRecord(currentEnrollments) as any[]
     const serializedCompletedEnrollments = serializeRecord(completedEnrollments) as any[]
+    const serializedActivityEnrollments = serializeRecord(allEnrollments) as any[]
 
     const currentCourses = serializedCurrentEnrollments.map((enrollment) => {
+      const courseRecord = enrollment.course as any
+
       return {
-        id: enrollment.id,
+        // Use the actual course id for activity lookups on the student side.
+        id: courseRecord?.id ?? '',
         enrollmentId: enrollment.id,
-        code: (enrollment.course as any)?.code ?? '',
-        name: (enrollment.course as any)?.name ?? '',
-        instructor: (enrollment.course as any)?.faculty?.name ?? 'TBA',
-        schedule: (enrollment.course as any)?.schedule ?? '',
-        room: (enrollment.course as any)?.room ?? '',
-        units: (enrollment.course as any)?.units ?? 0,
+        code: courseRecord?.code ?? '',
+        name: courseRecord?.name ?? '',
+        instructor: courseRecord?.faculty?.name ?? 'TBA',
+        schedule: courseRecord?.schedule ?? '',
+        room: courseRecord?.room ?? '',
+        units: courseRecord?.units ?? 0,
         status: enrollment.status === 'pending' ? 'Pending' : 'Active',
+        semester: enrollment.semester,
+      }
+    })
+
+    const activityCourses = serializedActivityEnrollments.map((enrollment) => {
+      const courseRecord = enrollment.course as any
+
+      return {
+        id: courseRecord?.id ?? '',
+        enrollmentId: enrollment.id,
+        code: courseRecord?.code ?? '',
+        name: courseRecord?.name ?? '',
+        instructor: courseRecord?.faculty?.name ?? 'TBA',
+        schedule: courseRecord?.schedule ?? '',
+        room: courseRecord?.room ?? '',
+        units: courseRecord?.units ?? 0,
+        status: enrollment.status === 'pending' ? 'Pending' : enrollment.status === 'enrolled' ? 'Active' : 'Completed',
         semester: enrollment.semester,
       }
     })
@@ -176,6 +216,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       },
       currentCourses,
       recentGrades,
+      activityCourses,
       academicHistory: serializeRecord(history),
       medicalRecords: serializeRecord(medicalRecords),
       counselingRecords: serializeRecord(counselingRecords),

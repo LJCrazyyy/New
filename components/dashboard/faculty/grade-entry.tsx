@@ -147,8 +147,8 @@ export function GradeEntry({ courses, enrollments, onRefresh }: GradeEntryProps)
         if (mounted) {
           setGradeScales(
             (Array.isArray(payload.data) ? payload.data : [])
-              .filter((entry) => typeof entry?.minScore === 'number' && typeof entry?.maxScore === 'number')
-              .map((entry) => ({
+              .filter((entry: any) => typeof entry?.minScore === 'number' && typeof entry?.maxScore === 'number')
+              .map((entry: any) => ({
                 id: entry.id,
                 letterGrade: String(entry.letterGrade ?? '').toUpperCase(),
                 minScore: Number(entry.minScore),

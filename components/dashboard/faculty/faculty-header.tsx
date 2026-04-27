@@ -27,6 +27,13 @@ export function FacultyHeader({ onLogout, currentUser, onNavigateSection }: Facu
         </div>
 
         <div className="flex items-center gap-4">
+          <Button
+            size="sm"
+            className="bg-blue-600 text-white hover:bg-blue-700"
+            onClick={() => onNavigateSection?.('activities')}
+          >
+            Upload Activity
+          </Button>
           <NotificationBell currentUser={currentUser} onNavigateSection={onNavigateSection} />
           <Button 
             variant="ghost" 

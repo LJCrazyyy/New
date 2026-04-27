@@ -89,7 +89,7 @@ export function CourseAdminManagement() {
 
       setCourses(Array.isArray(coursesPayload.data) ? coursesPayload.data : [])
       setFacultyUsers(
-        (Array.isArray(facultyPayload.data) ? facultyPayload.data : []).map((faculty) => ({
+        (Array.isArray(facultyPayload.data) ? facultyPayload.data : []).map((faculty: any) => ({
           id: faculty.id,
           name: faculty.name,
           systemId: faculty.systemId,

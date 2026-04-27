@@ -21,22 +21,22 @@ export interface UserData {
 
 const demoUsers: Record<string, { email: string; password: string; user: UserData }> = {
   student: {
-    email: 'aaron.adams@school.edu',
+    email: 'student@school.com',
     password: 'student123',
     user: {
       id: 'STU001',
-      name: 'Aaron Adams',
-      email: 'aaron.adams@school.edu',
+      name: 'John Smith',
+      email: 'student@school.com',
       role: 'student',
     },
   },
   faculty: {
-    email: 'faculty@school.com',
+    email: 'faculty.test@school.com',
     password: 'faculty123',
     user: {
       id: 'FAC001',
-      name: 'Dr. Maria Garcia',
-      email: 'faculty@school.com',
+      name: 'Test Faculty',
+      email: 'faculty.test@school.com',
       role: 'faculty',
     },
   },
@@ -68,13 +68,6 @@ export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false)
 
   const loadRoleAccount = async (targetRole: LoginPageProps['role'], page = 1) => {
-    if (targetRole !== 'student') {
-      setStudentPages(1)
-      setEmail(demoUsers[targetRole].email)
-      setPassword(defaultPasswords[targetRole])
-      return
-    }
-
     try {
       const response = await fetch(`/api/users?role=${targetRole}&limit=1&page=${page}&sort=name&order=asc`)
       const payload = await response.json()
@@ -86,7 +79,11 @@ export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
       const account = Array.isArray(payload.data) ? payload.data[0] : null
       const pagesFromMeta = Number(payload?.meta?.pagination?.pages)
 
-      setStudentPages(Number.isFinite(pagesFromMeta) && pagesFromMeta > 0 ? pagesFromMeta : 1)
+      if (targetRole === 'student') {
+        setStudentPages(Number.isFinite(pagesFromMeta) && pagesFromMeta > 0 ? pagesFromMeta : 1)
+      } else {
+        setStudentPages(1)
+      }
 
       if (account?.email) {
         setEmail(account.email)
@@ -95,10 +92,13 @@ export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
       }
 
       setEmail(demoUsers[targetRole].email)
-      setPassword(demoUsers[targetRole].password)
+      setPassword(defaultPasswords[targetRole])
     } catch {
+      if (targetRole !== 'student') {
+        setStudentPages(1)
+      }
       setEmail(demoUsers[targetRole].email)
-      setPassword(demoUsers[targetRole].password)
+      setPassword(defaultPasswords[targetRole])
     }
   }
 

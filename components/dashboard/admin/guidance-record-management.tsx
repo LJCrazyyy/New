@@ -71,6 +71,24 @@ export function GuidanceRecordManagement() {
 
   const formatStudentLabel = (student: UserOption) => `${student.name} (${student.systemId})`
 
+  const createStudentSuggestions = useMemo(() => {
+    const term = createStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : []
+
+    return source.slice(0, 8)
+  }, [createStudentQuery, students])
+
+  const editStudentSuggestions = useMemo(() => {
+    const term = editStudentQuery.trim().toLowerCase()
+    const source = term
+      ? students.filter((student) => formatStudentLabel(student).toLowerCase().includes(term))
+      : []
+
+    return source.slice(0, 8)
+  }, [editStudentQuery, students])
+
   const loadData = async () => {
     setIsLoading(true)
     setError('')

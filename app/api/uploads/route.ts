@@ -65,6 +65,17 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const fileUrl = `/uploads/${encodeURIComponent(sanitizeFileName(category))}/${encodeURIComponent(safeFileName)}`
-  return Response.json({ success: true, data: { fileUrl } }, { status: 201 })
+  const relativeFileUrl = `/uploads/${encodeURIComponent(sanitizeFileName(category))}/${encodeURIComponent(safeFileName)}`
+  const absoluteFileUrl = new URL(relativeFileUrl, request.nextUrl.origin).toString()
+
+  return Response.json(
+    {
+      success: true,
+      data: {
+        fileUrl: absoluteFileUrl,
+        relativeFileUrl,
+      },
+    },
+    { status: 201 }
+  )
 }

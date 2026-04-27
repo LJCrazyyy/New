@@ -134,6 +134,11 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
     loadSubmissions()
   }, [selectedActivityId])
 
+  const selectedCourse = useMemo(
+    () => courses.find((course) => course.id === selectedCourseId),
+    [courses, selectedCourseId]
+  )
+
   const enrolledStudentsForCourse = useMemo(() => {
     return enrollments
       .filter((enrollment) => enrollment.course?.id === selectedCourseId)
@@ -211,7 +216,7 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
                 title: `New ${type} posted`,
                 message: `${title.trim()} is now available in your course.`,
                 type: 'academic',
-                link: '/dashboard',
+                link: `/?section=activities&course=${encodeURIComponent(selectedCourseId)}`,
               }),
             })
           )
@@ -271,7 +276,7 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
             title: 'Activity graded',
             message: `Your submission has been graded. Score: ${score}`,
             type: 'academic',
-            link: '/dashboard',
+            link: '/?section=grades',
           }),
         })
       }
@@ -287,10 +292,19 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
   return (
     <Card className="bg-gray-900 border-gray-800">
       <CardHeader>
-        <CardTitle className="text-white">Course Activities</CardTitle>
-        <CardDescription>Create lectures, quizzes, tasks, assignments, and grade submissions</CardDescription>
+        <CardTitle className="text-white">Upload Activities and Lesson Modules</CardTitle>
+        <CardDescription>
+          Select a subject, fill in the details, then click Post Activity. Students in that subject will see it in their Activities page.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="rounded-xl border border-blue-700/50 bg-blue-950/30 p-4 text-sm text-blue-100">
+          <p className="font-semibold">Where to upload</p>
+          <p className="mt-1 text-blue-200">
+            Faculty Portal {'>'} Upload Activities {'>'} choose course {'>'} add title/file {'>'} Post Activity
+          </p>
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
           <select value={selectedCourseId} onChange={(event) => setSelectedCourseId(event.target.value)} className="md:col-span-2 h-10 rounded-md border border-gray-700 bg-gray-800 px-2 text-xs text-white">
             {courses.map((course) => (
@@ -333,6 +347,24 @@ export function CourseActivities({ facultyId, courses, enrollments }: CourseActi
             {selectedFile && <p className="mt-1 text-xs text-gray-300">Selected file: {selectedFile.name}</p>}
           </div>
         </div>
+
+        {selectedCourse && (
+          <div className="rounded-2xl border border-cyan-700 bg-cyan-950/60 p-4 text-sm text-slate-100">
+            <p className="text-xs uppercase tracking-[0.24em] text-cyan-300">Selected subject</p>
+            <p className="mt-2 text-base font-semibold">{selectedCourse.code} - {selectedCourse.name}</p>
+            <p className="text-slate-400">Section {selectedCourse.section} • {selectedCourse.semester}</p>
+            <p className="mt-3 text-slate-300">
+              {activities.length > 0 ? (
+                <>
+                  {activities.length} post{activities.length === 1 ? '' : 's'} already uploaded for this subject.
+                </>
+              ) : (
+                <>No uploads yet for this subject. Once you post, students will receive a notification.</>
+              )}
+            </p>
+          </div>
+        )}
+
         <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={createActivity} disabled={isSaving || isLoading}>
           {isSaving ? 'Saving...' : 'Post Activity'}
         </Button>

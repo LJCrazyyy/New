@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
     }).populate('course', 'units')
 
     const currentUnits = currentEnrollments.reduce((sum, enrollment) => {
-      const enrollmentUnits = enrollment.course?.units ?? 0
+      const enrollmentUnits = (enrollment.course as any)?.units ?? 0
       return sum + enrollmentUnits
     }, 0)
 

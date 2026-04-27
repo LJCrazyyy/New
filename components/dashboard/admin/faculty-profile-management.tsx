@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Edit, Plus, Save, Trash2, X } from 'lucide-react'
 
 type FacultyProfileRecord = {
-  id?: string
+  id: string
   employeeNumber: string
   department: string
   title: string
@@ -185,6 +185,7 @@ export function FacultyProfileManagement() {
   const onStartEdit = (profile: FacultyProfileRecord) => {
     setEditingId(profile.id)
     setEditForm({
+      userId: profile.user.id,
       employeeNumber: profile.employeeNumber,
       department: profile.department,
       title: profile.title,

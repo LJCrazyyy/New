@@ -242,11 +242,30 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
   await ensureRoleNotifications()
 
   const facultyUsers = await ensureFacultyRoster(200)
+  const testFacultyUser = await User.create({
+    systemId: 'FACTEST001',
+    name: 'Test Faculty',
+    email: 'faculty.test@school.com',
+    passwordHash: 'faculty123',
+    role: 'faculty',
+    status: 'active',
+    joinedAt: new Date('2023-01-01T00:00:00.000Z'),
+  })
+
+  await FacultyProfile.create({
+    user: testFacultyUser._id,
+    employeeNumber: 'EMP-TEST-001',
+    department: 'Information Technology',
+    title: 'Instructor',
+    office: 'Test Room 1',
+    coursesAssigned: [],
+  })
+
   const firstFaculty = facultyUsers[0]
   const secondFaculty = facultyUsers[1] ?? firstFaculty
   const thirdFaculty = facultyUsers[2] ?? firstFaculty
 
-  const [studentUser, adminUser] = await User.insertMany([
+  const [studentUser, studentUserTwo, studentUserThree, adminUser] = await User.insertMany([
     {
       systemId: 'STU001',
       name: 'John Smith',
@@ -255,6 +274,24 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       role: 'student',
       status: 'active',
       joinedAt: new Date('2024-01-10T00:00:00.000Z'),
+    },
+    {
+      systemId: 'STU002',
+      name: 'Jane Doe',
+      email: 'student2@school.com',
+      passwordHash: 'student123',
+      role: 'student',
+      status: 'active',
+      joinedAt: new Date('2024-02-01T00:00:00.000Z'),
+    },
+    {
+      systemId: 'STU003',
+      name: 'Alex Cruz',
+      email: 'student3@school.com',
+      passwordHash: 'student123',
+      role: 'student',
+      status: 'active',
+      joinedAt: new Date('2024-03-01T00:00:00.000Z'),
     },
     {
       systemId: 'ADM001',
@@ -277,11 +314,33 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       admissionDate: new Date('2023-08-15T00:00:00.000Z'),
       gpa: 3.6,
       unitsCompleted: 60,
+      unitsEnrolled: 22,
+    },
+    {
+      user: studentUserTwo._id,
+      studentNumber: '2024-002',
+      course: 'BS Information Technology',
+      section: 'BSIT-2B',
+      yearLevel: '2nd Year',
+      admissionDate: new Date('2024-01-15T00:00:00.000Z'),
+      gpa: 3.2,
+      unitsCompleted: 45,
+      unitsEnrolled: 18,
+    },
+    {
+      user: studentUserThree._id,
+      studentNumber: '2024-003',
+      course: 'BS Computer Science',
+      section: 'BSCS-1A',
+      yearLevel: '1st Year',
+      admissionDate: new Date('2024-01-15T00:00:00.000Z'),
+      gpa: 3.8,
+      unitsCompleted: 30,
       unitsEnrolled: 18,
     },
   ])
 
-  const [introProgramming, dataStructures, databaseSystems] = await Course.insertMany([
+  const [introProgramming, dataStructures, databaseSystems, softwareEngineering, computerNetworks, operatingSystems, technicalWriting, discreteMathematics] = await Course.insertMany([
     {
       code: 'CS101',
       name: 'Introduction to Programming',
@@ -318,6 +377,66 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       capacity: 30,
       enrolledCount: 28,
     },
+    {
+      code: 'CS201',
+      name: 'Software Engineering',
+      section: '01',
+      units: 3,
+      semester: 'Spring 2024',
+      schedule: 'TTh 9:00-10:30 AM',
+      room: 'Science Bldg 110',
+      faculty: testFacultyUser._id,
+      capacity: 40,
+      enrolledCount: 1,
+    },
+    {
+      code: 'CS402',
+      name: 'Computer Networks',
+      section: '01',
+      units: 3,
+      semester: 'Spring 2024',
+      schedule: 'MWF 3:00-4:00 PM',
+      room: 'Science Bldg 302',
+      faculty: firstFaculty?._id,
+      capacity: 35,
+      enrolledCount: 1,
+    },
+    {
+      code: 'CS403',
+      name: 'Operating Systems',
+      section: '01',
+      units: 3,
+      semester: 'Spring 2024',
+      schedule: 'TTh 10:30-12:00 PM',
+      room: 'Science Bldg 303',
+      faculty: secondFaculty?._id,
+      capacity: 35,
+      enrolledCount: 1,
+    },
+    {
+      code: 'ENG201',
+      name: 'Technical Writing',
+      section: '01',
+      units: 3,
+      semester: 'Spring 2024',
+      schedule: 'MWF 4:00-5:00 PM',
+      room: 'Main 210',
+      faculty: thirdFaculty?._id,
+      capacity: 40,
+      enrolledCount: 1,
+    },
+    {
+      code: 'MATH201',
+      name: 'Discrete Mathematics',
+      section: '01',
+      units: 3,
+      semester: 'Spring 2024',
+      schedule: 'TTh 4:30-6:00 PM',
+      room: 'Main 312',
+      faculty: firstFaculty?._id,
+      capacity: 40,
+      enrolledCount: 1,
+    },
   ])
 
   if (firstFaculty?._id) {
@@ -325,7 +444,18 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       { user: firstFaculty._id },
       {
         $set: {
-          coursesAssigned: [introProgramming._id, dataStructures._id, databaseSystems._id],
+          coursesAssigned: [introProgramming._id, dataStructures._id, databaseSystems._id, computerNetworks._id],
+        },
+      }
+    )
+  }
+
+  if (testFacultyUser?._id) {
+    await FacultyProfile.updateOne(
+      { user: testFacultyUser._id },
+      {
+        $set: {
+          coursesAssigned: [softwareEngineering._id, operatingSystems._id],
         },
       }
     )
@@ -358,6 +488,94 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       status: 'enrolled',
       prelim: 87,
       midterm: 89,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUser._id,
+      course: dataStructures._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 88,
+      midterm: 90,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUser._id,
+      course: softwareEngineering._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 89,
+      midterm: 91,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUser._id,
+      course: computerNetworks._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 86,
+      midterm: 88,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUser._id,
+      course: operatingSystems._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 88,
+      midterm: 90,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUser._id,
+      course: technicalWriting._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 90,
+      midterm: 92,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUser._id,
+      course: discreteMathematics._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 87,
+      midterm: 89,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUserTwo._id,
+      course: softwareEngineering._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 85,
+      midterm: 88,
+      final: null,
+      average: null,
+      gradeLetter: null,
+    },
+    {
+      student: studentUserThree._id,
+      course: dataStructures._id,
+      semester: 'Spring 2024',
+      status: 'enrolled',
+      prelim: 90,
+      midterm: 92,
       final: null,
       average: null,
       gradeLetter: null,
@@ -480,12 +698,12 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
   ])
 
   return {
-    users: facultyUsers.length + 2,
-    studentProfiles: 1,
-    facultyProfiles: facultyUsers.length,
+    users: facultyUsers.length + 5,
+    studentProfiles: 3,
+    facultyProfiles: facultyUsers.length + 1,
     adminProfiles: 1,
-    courses: 3,
-    enrollments: 2,
+    courses: 8,
+    enrollments: 10,
     academicHistory: 3,
     medicalRecords: 1,
     counselingRecords: 1,
@@ -701,6 +919,8 @@ async function ensureBulkCoursesAndEnrollStudents(defaultSemester: string) {
       const final = clampGrade(72 + ((gradeSeed * 5) % 19))
       const average = Number(((prelim + midterm + final) / 3).toFixed(1))
 
+      const status = average >= 90 ? 'completed' as const : average >= 75 ? 'enrolled' as const : 'pending' as const
+
       return {
         updateOne: {
           filter: {
@@ -713,7 +933,7 @@ async function ensureBulkCoursesAndEnrollStudents(defaultSemester: string) {
               student: student._id,
               course: course._id,
               semester: defaultSemester,
-              status: average >= 90 ? 'completed' : average >= 75 ? 'enrolled' : 'pending',
+              status,
               prelim,
               midterm,
               final,
@@ -1020,7 +1240,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
             $set: {
               attendance: record._id,
               sessionDate: new Date(baseDate),
-              status: 'present',
+              status: 'present' as const,
               remarks: 'Auto-seeded present session.',
             },
           },
@@ -1092,17 +1312,17 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
         return {
           updateOne: {
             filter: {
-              recipientRole: 'faculty',
+              recipientRole: 'faculty' as const,
               recipientId: String(counselor._id),
               title: `Counseling request from ${student.systemId ?? 'student'}`,
             },
             update: {
               $set: {
-                recipientRole: 'faculty',
+                recipientRole: 'faculty' as const,
                 recipientId: String(counselor._id),
                 title: `Counseling request from ${student.systemId ?? 'student'}`,
                 message: `A counseling thread was created for ${student.name ?? 'a student'} and assigned to you.`,
-                type: 'counseling',
+                type: 'counseling' as const,
                 link: '/dashboard',
                 isRead: false,
               },
@@ -1195,6 +1415,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
   const historyOperations = studentUsers.flatMap((student, index) => {
     const studentEnrollments = enrollmentByStudent.get(String(student._id)) ?? []
     const topEnrollment = studentEnrollments[0]
+    const counselor = counselorPool.length > 0 ? counselorPool[index % counselorPool.length] : undefined
 
     return [
       {
@@ -1207,11 +1428,11 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
           update: {
             $set: {
               student: student._id,
-              type: 'enrollment',
+              type: 'enrollment' as const,
               description: 'Fall 2026 enrollment processed',
               details: `Student enrolled in ${studentEnrollments.length} courses for ${defaultSemester}.`,
               recordedAt: new Date(now - ((index % 40) + 5) * 24 * 60 * 60 * 1000),
-              createdBy: counselorId,
+              createdBy: counselor?._id,
             },
           },
           upsert: true,
@@ -1227,12 +1448,12 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
           update: {
             $set: {
               student: student._id,
-              type: 'milestone',
+              type: 'milestone' as const,
               description: 'Attendance baseline established',
               details: 'Attendance tracking initialized for current semester classes.',
               relatedCourse: topEnrollment?.course?._id ?? topEnrollment?.course,
               recordedAt: new Date(now - ((index % 30) + 3) * 24 * 60 * 60 * 1000),
-              createdBy: counselorId,
+              createdBy: counselor?._id,
             },
           },
           upsert: true,
@@ -1248,17 +1469,17 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
   const notificationOperations = studentUsers.map((student) => ({
     updateOne: {
       filter: {
-        recipientRole: 'student',
+        recipientRole: 'student' as const,
         recipientId: String(student._id),
         title: 'Semester data sync complete',
       },
       update: {
         $set: {
-          recipientRole: 'student',
+          recipientRole: 'student' as const,
           recipientId: String(student._id),
           title: 'Semester data sync complete',
           message: 'Your enrollments, attendance, documents, and records are fully connected for the current semester.',
-          type: 'system',
+          type: 'system' as const,
           link: '/',
           isRead: false,
         },

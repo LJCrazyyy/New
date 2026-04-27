@@ -57,6 +57,16 @@ type StudentDashboardData = {
     units: number
     status: string
   }>
+  activityCourses: Array<{
+    id: string
+    code: string
+    name: string
+    instructor: string
+    schedule: string
+    room: string
+    units: number
+    status: string
+  }>
   recentGrades: Array<{
     id: string
     code: string
@@ -127,6 +137,7 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
     () => [
       'overview',
       'courses',
+      'activities',
       'grades',
       'academic-history',
       'health',
@@ -139,6 +150,7 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
   )
 
   const querySection = searchParams.get('section')?.trim().toLowerCase() ?? ''
+  const queryCourse = searchParams.get('course')?.trim() ?? ''
   const initialSection = validSections.includes(querySection) ? querySection : 'overview'
 
   const [activeSection, setActiveSection] = useState(initialSection)
@@ -154,6 +166,11 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
     setActiveSection(section)
     const params = new URLSearchParams(searchParams.toString())
     params.set('section', section)
+
+    if (section !== 'activities') {
+      params.delete('course')
+    }
+
     router.push(`${pathname}?${params.toString()}`)
   }
 
@@ -163,6 +180,9 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
     } else if (!querySection && activeSection !== 'overview') {
       setActiveSection('overview')
     }
+  }, [querySection, activeSection, validSections])
+
+  useEffect(() => {
     let mounted = true
 
     async function loadDashboardData() {
@@ -231,7 +251,8 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
             </>
           )}
           
-          {activeSection === 'courses' && <CurrentCourses courses={data?.currentCourses ?? []} studentId={currentUser.id} fullWidth />}
+          {activeSection === 'courses' && <CurrentCourses courses={data?.currentCourses ?? []} studentId={currentUser.id} />}
+          {activeSection === 'activities' && <CurrentCourses courses={data?.activityCourses ?? []} studentId={currentUser.id} fullWidth initialCourseId={queryCourse} />}
           {activeSection === 'grades' && <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} student={data?.student} profile={data?.profile} fullWidth />}
           {activeSection === 'academic-history' && <AcademicHistory activities={data?.academicHistory ?? []} />}
           {activeSection === 'health' && <MedicalRecords studentId={currentUser.id} records={data?.medicalRecords ?? []} />}

@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Edit, Plus, Save, Trash2, X } from 'lucide-react'
 
 type StudentProfileRecord = {
@@ -39,6 +38,8 @@ const initialForm: StudentProfileForm = {
 }
 
 const yearLevels = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year']
+const API_PAGE_LIMIT = 100
+const PAGE_SIZE_OPTIONS = [25, 50, 100]
 
 export function StudentProfileManagement() {
   const [profiles, setProfiles] = useState<StudentProfileRecord[]>([])
@@ -50,20 +51,37 @@ export function StudentProfileManagement() {
   const [createForm, setCreateForm] = useState<StudentProfileForm>(initialForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<StudentProfileForm>(initialForm)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(25)
 
   const loadData = async () => {
     setIsLoading(true)
     setError('')
 
     try {
-      const response = await fetch('/api/student-profiles?limit=500&sort=-createdAt&populate=user')
-      const payload = await response.json()
+      const allProfiles: StudentProfileRecord[] = []
+      let page = 1
+      let totalPages = 1
 
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message || 'Failed to load student profiles.')
+      while (page <= totalPages) {
+        const response = await fetch(
+          `/api/student-profiles?limit=${API_PAGE_LIMIT}&page=${page}&sort=-createdAt&populate=user`
+        )
+        const payload = await response.json()
+
+        if (!response.ok || !payload.success) {
+          throw new Error(payload.message || 'Failed to load student profiles.')
+        }
+
+        const pageProfiles = Array.isArray(payload.data) ? (payload.data as StudentProfileRecord[]) : []
+        allProfiles.push(...pageProfiles)
+
+        const pagesFromMeta = Number(payload?.meta?.pagination?.pages)
+        totalPages = Number.isFinite(pagesFromMeta) && pagesFromMeta > 0 ? pagesFromMeta : 1
+        page += 1
       }
 
-      setProfiles(Array.isArray(payload.data) ? payload.data : [])
+      setProfiles(allProfiles)
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load student profiles.')
     } finally {
@@ -84,6 +102,21 @@ export function StudentProfileManagement() {
         .some((value) => String(value ?? '').toLowerCase().includes(term))
     })
   }, [profiles, search])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [pageSize])
+
+  const totalPages = Math.max(1, Math.ceil(filteredProfiles.length / pageSize))
+  const safeCurrentPage = Math.min(currentPage, totalPages)
+  const paginatedProfiles = useMemo(() => {
+    const start = (safeCurrentPage - 1) * pageSize
+    return filteredProfiles.slice(start, start + pageSize)
+  }, [filteredProfiles, pageSize, safeCurrentPage])
 
   const onCreateProfile = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -235,7 +268,7 @@ export function StudentProfileManagement() {
               </tr>
             </thead>
             <tbody>
-              {filteredProfiles.map((profile) => (
+              {paginatedProfiles.map((profile) => (
                 <tr key={profile.id} className="border-b border-gray-800 hover:bg-gray-800/50">
                   <td className="py-3 px-4 text-white font-medium">{profile.studentNumber}</td>
                   <td className="py-3 px-4 text-gray-300">{profile.user?.name ?? 'Unknown'}</td>
@@ -282,6 +315,51 @@ export function StudentProfileManagement() {
             </tbody>
           </table>
         </div>
+
+        {filteredProfiles.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-gray-800 pt-4 text-sm text-gray-400 md:flex-row md:items-center md:justify-between">
+            <p>
+              Showing {(safeCurrentPage - 1) * pageSize + 1}-
+              {Math.min(safeCurrentPage * pageSize, filteredProfiles.length)} of {filteredProfiles.length} profiles
+            </p>
+            <div className="flex items-center gap-2">
+              <label className="text-gray-400">Show</label>
+              <select
+                value={pageSize}
+                onChange={(event) => setPageSize(Number(event.target.value))}
+                className="h-8 rounded-md border border-gray-700 bg-gray-900 px-2 text-sm text-white"
+              >
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+              <span className="text-gray-400">per page</span>
+              <span>
+                Page {safeCurrentPage} of {totalPages}
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-gray-700 text-gray-300"
+                disabled={safeCurrentPage <= 1}
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-gray-700 text-gray-300"
+                disabled={safeCurrentPage >= totalPages}
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
 
         {filteredProfiles.length === 0 && !isLoading && (
           <div className="text-center py-8">

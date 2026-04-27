@@ -23,7 +23,7 @@ export function FacultySidebar({ activeSection, onSectionChange, facultyName, de
   const sections = [
     { id: 'overview', label: 'Overview', icon: LayoutDashboard },
     { id: 'courses', label: 'My Courses', icon: BookOpen },
-    { id: 'activities', label: 'Activities', icon: ClipboardList },
+    { id: 'activities', label: 'Upload Activities', icon: ClipboardList },
     { id: 'grades', label: 'Grade Entry', icon: FileText },
     { id: 'roster', label: 'Class Roster', icon: Users },
     { id: 'performance', label: 'Performance', icon: TrendingUp },

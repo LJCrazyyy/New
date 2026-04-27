@@ -206,7 +206,7 @@ export function serializeRecord(record: any): any {
     const serializedRecord = {
       ...plainRecord,
       id:
-        typeof plainRecord._id === 'object' && plainRecord._id && 'toString' in plainRecord._id
+        typeof plainRecord._id === 'object' && plainRecord._id && 'toString' in plainRecord._id && typeof plainRecord._id.toString === 'function'
           ? plainRecord._id.toString()
           : typeof plainRecord._id === 'string'
             ? plainRecord._id
