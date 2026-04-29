@@ -50,7 +50,7 @@ const initialForm: CourseForm = {
   semester: 'Spring 2024',
   schedule: '',
   room: '',
-  capacity: '40',
+  capacity: '50',
   faculty: '',
 }
 
@@ -115,6 +115,12 @@ export function CourseAdminManagement() {
         .some((value) => String(value ?? '').toLowerCase().includes(term))
     })
   }, [courses, search])
+
+  const getNormalizedCapacity = (capacity: number) => Math.min(Math.max(Number(capacity ?? 0), 0), 50)
+
+  const getNormalizedEnrollmentCount = (course: CourseRecord) => {
+    return Math.min(Number(course.enrolledCount ?? 0), getNormalizedCapacity(course.capacity))
+  }
 
   const onCreateCourse = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -260,7 +266,7 @@ export function CourseAdminManagement() {
             <Input value={createForm.semester} onChange={(e) => setCreateForm((p) => ({ ...p, semester: e.target.value }))} placeholder="Semester" className="bg-gray-800 border-gray-700 text-white" />
             <Input value={createForm.schedule} onChange={(e) => setCreateForm((p) => ({ ...p, schedule: e.target.value }))} placeholder="Schedule" className="bg-gray-800 border-gray-700 text-white" />
             <Input value={createForm.room} onChange={(e) => setCreateForm((p) => ({ ...p, room: e.target.value }))} placeholder="Room" className="bg-gray-800 border-gray-700 text-white" />
-            <Input value={createForm.capacity} onChange={(e) => setCreateForm((p) => ({ ...p, capacity: e.target.value }))} placeholder="Capacity" type="number" className="bg-gray-800 border-gray-700 text-white" />
+            <Input value={createForm.capacity} onChange={(e) => setCreateForm((p) => ({ ...p, capacity: e.target.value }))} placeholder="Capacity" type="number" min={1} max={50} className="bg-gray-800 border-gray-700 text-white" />
             <select value={createForm.faculty} onChange={(e) => setCreateForm((p) => ({ ...p, faculty: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
               <option value="">Assign Faculty</option>
               {facultyUsers.map((faculty) => (
@@ -300,14 +306,16 @@ export function CourseAdminManagement() {
             </thead>
             <tbody>
               {filteredCourses.map((course) => {
-                const status = course.enrolledCount >= course.capacity ? 'Full' : 'Open'
+                const normalizedCapacity = getNormalizedCapacity(course.capacity)
+                const normalizedEnrollmentCount = getNormalizedEnrollmentCount(course)
+                const status = normalizedEnrollmentCount >= normalizedCapacity ? 'Full' : 'Open'
 
                 return (
                   <tr key={course.id} className="border-b border-gray-800 hover:bg-gray-800/50">
                     <td className="py-3 px-4 text-white font-mono">{course.code}</td>
                     <td className="py-3 px-4 text-white">{course.name}</td>
                     <td className="py-3 px-4 text-center text-gray-400 text-xs">{course.faculty?.name ?? 'Unassigned'}</td>
-                    <td className="py-3 px-4 text-center text-white">{course.enrolledCount}</td>
+                    <td className="py-3 px-4 text-center text-white">{normalizedEnrollmentCount}</td>
                     <td className="py-3 px-4 text-center text-white">{course.units}</td>
                     <td className="py-3 px-4 text-center">
                       <Badge className={status === 'Open' ? 'bg-green-600/50 text-green-200' : 'bg-gray-600/50 text-gray-200'}>{status}</Badge>
@@ -351,7 +359,7 @@ export function CourseAdminManagement() {
               <Input value={editForm.semester} onChange={(e) => setEditForm((p) => ({ ...p, semester: e.target.value }))} className="bg-gray-800 border-gray-700 text-white" />
               <Input value={editForm.schedule} onChange={(e) => setEditForm((p) => ({ ...p, schedule: e.target.value }))} className="bg-gray-800 border-gray-700 text-white" />
               <Input value={editForm.room} onChange={(e) => setEditForm((p) => ({ ...p, room: e.target.value }))} className="bg-gray-800 border-gray-700 text-white" />
-              <Input value={editForm.capacity} onChange={(e) => setEditForm((p) => ({ ...p, capacity: e.target.value }))} type="number" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={editForm.capacity} onChange={(e) => setEditForm((p) => ({ ...p, capacity: e.target.value }))} type="number" min={1} max={50} className="bg-gray-800 border-gray-700 text-white" />
               <select value={editForm.faculty} onChange={(e) => setEditForm((p) => ({ ...p, faculty: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
                 <option value="">Assign Faculty</option>
                 {facultyUsers.map((faculty) => (

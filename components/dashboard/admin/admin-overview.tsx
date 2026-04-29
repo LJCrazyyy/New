@@ -53,6 +53,12 @@ export function AdminOverview() {
           setIsLoading(false)
         }
       }
+
+      const MAX_STUDENTS_PER_COURSE = 50
+
+      function normalizeCourseValue(value: number) {
+        return Math.min(Math.max(Number(value ?? 0), 0), MAX_STUDENTS_PER_COURSE)
+      }
     }
 
     loadOverview()
@@ -73,8 +79,8 @@ export function AdminOverview() {
     () =>
       (payload?.recentCourses ?? []).map((course) => ({
         course: course.code,
-        students: course.enrolledCount ?? 0,
-        capacity: course.capacity ?? 0,
+        students: normalizeCourseValue(course.enrolledCount ?? 0),
+        capacity: normalizeCourseValue(course.capacity ?? 0),
       })),
     [payload]
   )

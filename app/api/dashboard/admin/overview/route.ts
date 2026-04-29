@@ -10,6 +10,13 @@ import { normalizeError, serializeRecord } from '@/lib/api-resources'
 
 export const runtime = 'nodejs'
 
+const MAX_STUDENTS_PER_COURSE = 50
+
+function normalizeCourseValue(value: unknown) {
+  const numericValue = Number(value ?? 0)
+  return Number.isFinite(numericValue) ? Math.min(Math.max(numericValue, 0), MAX_STUDENTS_PER_COURSE) : 0
+}
+
 function apiError(message: string, status: number, details?: Record<string, unknown>) {
   return Response.json(
     {
@@ -68,6 +75,12 @@ export async function GET() {
 
     const averageGpa = averageGpaResult[0]?.averageGpa ?? 0
 
+    const normalizedRecentCourses = serializeRecord(recentCourses).map((course: any) => ({
+      ...course,
+      enrolledCount: normalizeCourseValue(course.enrolledCount),
+      capacity: normalizeCourseValue(course.capacity),
+    }))
+
     return apiSuccess({
       stats: {
         students: studentCount,
@@ -80,7 +93,7 @@ export async function GET() {
       },
       recentLogs: serializeRecord(recentLogs),
       recentSettings: serializeRecord(recentSettings),
-      recentCourses: serializeRecord(recentCourses),
+      recentCourses: normalizedRecentCourses,
     })
   } catch (error) {
     return apiError(normalizeError(error), 500)

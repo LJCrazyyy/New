@@ -84,7 +84,12 @@ const courseSchema = new Schema(
     schedule: { type: String, required: true, trim: true },
     room: { type: String, required: true, trim: true },
     faculty: { type: Schema.Types.ObjectId, ref: 'User' },
-    capacity: { type: Number, default: 0 },
+    capacity: {
+      type: Number,
+      default: 50,
+      min: [1, 'Course capacity must be at least 1.'],
+      max: [50, 'Course capacity cannot exceed 50 students.'],
+    },
     enrolledCount: { type: Number, default: 0 },
   },
   { timestamps: true }

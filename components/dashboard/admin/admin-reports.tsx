@@ -20,6 +20,12 @@ type EnrollmentRecord = {
   status: 'enrolled' | 'completed' | 'dropped' | 'pending'
 }
 
+const MAX_STUDENTS_PER_COURSE = 50
+
+function normalizeCourseValue(value: number) {
+  return Math.min(Math.max(Number(value ?? 0), 0), MAX_STUDENTS_PER_COURSE)
+}
+
 export function AdminReports() {
   const [users, setUsers] = useState<UserRecord[]>([])
   const [courses, setCourses] = useState<CourseRecord[]>([])
@@ -81,8 +87,8 @@ export function AdminReports() {
   const courseEnrollmentData = useMemo(() => {
     return courses.slice(0, 8).map((course) => ({
       course: course.code,
-      enrolled: course.enrolledCount ?? 0,
-      capacity: course.capacity ?? 0,
+      enrolled: normalizeCourseValue(course.enrolledCount ?? 0),
+      capacity: normalizeCourseValue(course.capacity ?? 0),
     }))
   }, [courses])
 

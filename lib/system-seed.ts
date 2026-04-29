@@ -774,7 +774,7 @@ const bulkStudentCourseCatalog: CourseSeedInput[] = [
     semester: 'Fall 2026',
     schedule: 'MWF 08:00-09:00 AM',
     room: 'Science Bldg 101',
-    capacity: 1500,
+    capacity: 50,
   },
   {
     code: 'CS102',
@@ -784,7 +784,7 @@ const bulkStudentCourseCatalog: CourseSeedInput[] = [
     semester: 'Fall 2026',
     schedule: 'TTh 09:00-10:30 AM',
     room: 'IT Lab 201',
-    capacity: 1500,
+    capacity: 50,
   },
   {
     code: 'IT103',
@@ -794,7 +794,7 @@ const bulkStudentCourseCatalog: CourseSeedInput[] = [
     semester: 'Fall 2026',
     schedule: 'MWF 10:00-11:00 AM',
     room: 'Science Bldg 205',
-    capacity: 1500,
+    capacity: 50,
   },
   {
     code: 'MATH101',
@@ -804,7 +804,7 @@ const bulkStudentCourseCatalog: CourseSeedInput[] = [
     semester: 'Fall 2026',
     schedule: 'TTh 01:00-02:30 PM',
     room: 'Main 303',
-    capacity: 1500,
+    capacity: 50,
   },
   {
     code: 'ENG101',
@@ -814,7 +814,7 @@ const bulkStudentCourseCatalog: CourseSeedInput[] = [
     semester: 'Fall 2026',
     schedule: 'MWF 02:00-03:00 PM',
     room: 'Main 207',
-    capacity: 1500,
+    capacity: 50,
   },
   {
     code: 'HIST101',
@@ -824,7 +824,7 @@ const bulkStudentCourseCatalog: CourseSeedInput[] = [
     semester: 'Fall 2026',
     schedule: 'TTh 03:00-04:30 PM',
     room: 'Main 105',
-    capacity: 1500,
+    capacity: 50,
   },
 ]
 

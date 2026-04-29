@@ -6,6 +6,27 @@ import { normalizeError, serializeRecord, applyPopulate, buildPagination, buildQ
 export const runtime = 'nodejs'
 
 const MAX_UNITS_PER_SEMESTER = 21
+const ACTIVE_ENROLLMENT_STATUSES = new Set(['enrolled', 'pending'])
+const MAX_STUDENTS_PER_TEACHER_SUBJECT = 50
+
+async function syncCourseEnrolledCount(courseId: string, semester: string) {
+  const activeEnrollmentCount = await Enrollment.countDocuments({
+    course: courseId,
+    semester,
+    status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+  })
+
+  const normalizedEnrolledCount = Math.min(activeEnrollmentCount, 50)
+
+  await Course.updateOne(
+    { _id: courseId },
+    {
+      $set: { enrolledCount: normalizedEnrolledCount },
+    }
+  )
+
+  return normalizedEnrolledCount
+}
 
 function normalizeLetterGrade(value: string | null | undefined) {
   return String(value ?? '')
@@ -99,9 +120,53 @@ export async function POST(request: NextRequest) {
     }
 
     // Get the target course
-    const course = await Course.findById(body.course).select('units code name')
+    const course = await Course.findById(body.course).select('units code name capacity faculty semester')
     if (!course) {
       return apiError('Course not found.', 404)
+    }
+
+    const courseCapacity = typeof course.capacity === 'number' && course.capacity > 0 ? Math.min(course.capacity, 50) : 50
+
+    const activeEnrollmentCount = await Enrollment.countDocuments({
+      course: body.course,
+      semester: body.semester,
+      status: { $in: ['enrolled', 'pending'] },
+    })
+
+    if (activeEnrollmentCount >= courseCapacity) {
+      return apiError(`Cannot enroll: this course is already full (${activeEnrollmentCount}/${courseCapacity}).`, 400, {
+        courseCode: course.code,
+        enrolledCount: activeEnrollmentCount,
+        capacity: courseCapacity,
+      })
+    }
+
+    // Enforce a maximum of 50 active students per teacher per subject per semester.
+    if (course.faculty) {
+      const teacherSubjectCourseIds = await Course.find({
+        faculty: course.faculty,
+        code: course.code,
+        semester: body.semester,
+      }).select('_id')
+
+      const teacherSubjectActiveCount = await Enrollment.countDocuments({
+        course: { $in: teacherSubjectCourseIds.map((entry) => entry._id) },
+        semester: body.semester,
+        status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+      })
+
+      if (teacherSubjectActiveCount >= MAX_STUDENTS_PER_TEACHER_SUBJECT) {
+        return apiError(
+          `Cannot enroll: this teacher already has the maximum ${MAX_STUDENTS_PER_TEACHER_SUBJECT} students for subject ${course.code} in ${body.semester}.`,
+          400,
+          {
+            courseCode: course.code,
+            semester: body.semester,
+            teacherSubjectStudents: teacherSubjectActiveCount,
+            maxStudentsPerTeacherSubject: MAX_STUDENTS_PER_TEACHER_SUBJECT,
+          }
+        )
+      }
     }
 
     // Enforce prerequisite rules before enrollment
@@ -210,6 +275,10 @@ export async function POST(request: NextRequest) {
       semester: body.semester,
       status: body.status || 'pending',
     })
+
+    if (ACTIVE_ENROLLMENT_STATUSES.has(body.status || 'pending')) {
+      await syncCourseEnrolledCount(String(body.course), body.semester)
+    }
 
     const populatedEnrollment = await Enrollment.findById(enrollment._id).populate([
       { path: 'student', select: 'systemId name email role status' },

@@ -11,6 +11,7 @@ import {
   parseJsonBody,
   serializeRecord,
 } from '@/lib/api-resources'
+import { Course, Enrollment } from '@/lib/system-models'
 
 export const runtime = 'nodejs'
 
@@ -20,6 +21,85 @@ const protectedSystemSettingsKeys = new Set([
   'currentSemester',
   'academicYear',
 ])
+
+const ACTIVE_ENROLLMENT_STATUSES = new Set(['enrolled', 'pending'])
+
+async function syncCourseEnrolledCount(courseId: string, semester: string) {
+  const activeEnrollmentCount = await Enrollment.countDocuments({
+    course: courseId,
+    semester,
+    status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+  })
+
+  const normalizedEnrolledCount = Math.min(activeEnrollmentCount, 50)
+
+  await Course.updateOne(
+    { _id: courseId },
+    {
+      $set: { enrolledCount: normalizedEnrolledCount },
+    }
+  )
+}
+
+async function syncAllCourseConstraints() {
+  await Course.updateMany(
+    { capacity: { $gt: 50 } },
+    {
+      $set: { capacity: 50 },
+    }
+  )
+
+  const activeCounts = await Enrollment.aggregate([
+    {
+      $match: {
+        status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          course: '$course',
+          semester: '$semester',
+        },
+        count: { $sum: 1 },
+      },
+    },
+  ])
+
+  const activeCountMap = new Map<string, number>()
+
+  for (const entry of activeCounts) {
+    const courseId = String(entry?._id?.course ?? '')
+    const semester = String(entry?._id?.semester ?? '')
+    const count = Number(entry?.count ?? 0)
+    activeCountMap.set(`${courseId}|${semester}`, count)
+  }
+
+  const courses = await Course.find({}).select('_id semester enrolledCount').lean()
+  const bulkOperations: Array<any> = []
+
+  for (const course of courses) {
+    const key = `${String(course._id)}|${String(course.semester ?? '')}`
+    const computedCount = activeCountMap.get(key) ?? 0
+    const normalizedCount = Math.min(computedCount, 50)
+    const storedCount = Number(course.enrolledCount ?? 0)
+
+    if (storedCount !== normalizedCount) {
+      bulkOperations.push({
+        updateOne: {
+          filter: { _id: course._id },
+          update: {
+            $set: { enrolledCount: normalizedCount },
+          },
+        },
+      })
+    }
+  }
+
+  if (bulkOperations.length > 0) {
+    await Course.bulkWrite(bulkOperations, { ordered: false })
+  }
+}
 
 function getRequestRole(request: NextRequest) {
   return request.headers.get('x-user-role')?.trim().toLowerCase() ?? ''
@@ -80,6 +160,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
   try {
     await connectToDatabase()
+
+    if (collection === 'courses') {
+      await syncAllCourseConstraints()
+    }
 
     if (params.length === 0) {
       const filter = buildQueryFilter(collection, request.nextUrl.searchParams)
@@ -214,6 +298,11 @@ async function updateRecord(request: NextRequest, context: RouteContext) {
   try {
     await connectToDatabase()
 
+    const previousEnrollment =
+      collection === 'enrollments'
+        ? await resource.model.findById(recordId).select('course semester status')
+        : null
+
     if (collection === 'system-settings') {
       const existingRecord = await resource.model.findById(recordId).select('key')
 
@@ -237,6 +326,32 @@ async function updateRecord(request: NextRequest, context: RouteContext) {
 
     if (!updatedRecord) {
       return apiError('Record not found.', 404)
+    }
+
+    if (collection === 'enrollments' && previousEnrollment) {
+      const previousCourseId = String(previousEnrollment.course)
+      const previousSemester = String(previousEnrollment.semester)
+      const previousStatus = String(previousEnrollment.status)
+
+      const nextCourseId = String((updatedRecord as any).course)
+      const nextSemester = String((updatedRecord as any).semester)
+      const nextStatus = String((updatedRecord as any).status)
+
+      const shouldSyncPrevious =
+        ACTIVE_ENROLLMENT_STATUSES.has(previousStatus) &&
+        (!ACTIVE_ENROLLMENT_STATUSES.has(nextStatus) || previousCourseId !== nextCourseId || previousSemester !== nextSemester)
+
+      const shouldSyncNext =
+        ACTIVE_ENROLLMENT_STATUSES.has(nextStatus) &&
+        (!ACTIVE_ENROLLMENT_STATUSES.has(previousStatus) || previousCourseId !== nextCourseId || previousSemester !== nextSemester)
+
+      if (shouldSyncPrevious) {
+        await syncCourseEnrolledCount(previousCourseId, previousSemester)
+      }
+
+      if (shouldSyncNext) {
+        await syncCourseEnrolledCount(nextCourseId, nextSemester)
+      }
     }
 
     const populatedRecord = await applyPopulate(
@@ -280,6 +395,11 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     await connectToDatabase()
 
+    const previousEnrollment =
+      resolved.collection === 'enrollments'
+        ? await resource.model.findById(recordId).select('course semester status')
+        : null
+
     if (resolved.collection === 'system-settings') {
       const existingRecord = await resource.model.findById(recordId).select('key')
 
@@ -296,6 +416,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     if (!deletedRecord) {
       return apiError('Record not found.', 404)
+    }
+
+    if (
+      resolved.collection === 'enrollments' &&
+      previousEnrollment &&
+      ACTIVE_ENROLLMENT_STATUSES.has(String(previousEnrollment.status))
+    ) {
+      await syncCourseEnrolledCount(String(previousEnrollment.course), String(previousEnrollment.semester))
     }
 
     return apiSuccess(serializeRecord(deletedRecord))
