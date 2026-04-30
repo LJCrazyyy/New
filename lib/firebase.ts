@@ -44,13 +44,25 @@ export function initializeFirebase() {
         appId: firebaseConfig.appId as string,
       })
 
+  try {
+    // Small runtime hint for debugging in the browser console
+    // (will only run on the client because this is a client module)
+    // eslint-disable-next-line no-console
+    console.info('Firebase initialized:', { name: app?.name, projectId: firebaseConfig.projectId })
+  } catch {}
+
   if (!analyticsPromise) {
     analyticsPromise = isSupported().then((supported) => {
       if (!supported || !firebaseConfig.measurementId) {
         return null
       }
 
-      return getAnalytics(app)
+      const analytics = getAnalytics(app)
+      try {
+        // eslint-disable-next-line no-console
+        console.info('Firebase Analytics enabled')
+      } catch {}
+      return analytics
     })
   }
 
