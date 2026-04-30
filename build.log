@@ -1,0 +1,125 @@
+﻿   Γû▓ Next.js 15.2.2
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+node.exe : [Error: "." is not exported under the condition "style" from package 
+C:\Codes\New\node_modules\@tailwindcss\postcss (see exports field in 
+C:\Codes\New\node_modules\@tailwindcss\postcss\package.json)]
+At C:\Users\Asus\AppData\Roaming\npm\pnpm.ps1:24 char:5
++     & "node$exe"  "$basedir/node_modules/pnpm/bin/pnpm.cjs" $args
++     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([Error: "." is ...\package.json)]:String) [],  
+   RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+<w> [webpack.cache.PackFileCacheStrategy] Skipped not serializable cache item 'Compilation/m
+odules|C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1__react@18.3
+.1\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet[1].rules[13
+].oneOf[10].use[2]!C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1
+__react@18.3.1\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\index.js??rul
+eSet[1].rules[13].oneOf[10].use[3]!C:\Codes\New\app\globals.css': No serializer registered 
+for PostCSSSyntaxError
+<w> while serializing webpack/lib/cache/PackFileCacheStrategy.PackContentItems -> 
+webpack/lib/NormalModule -> webpack/lib/ModuleBuildError -> PostCSSSyntaxError
+Failed to compile.
+
+./app/globals.css:1:1
+Syntax error: tailwindcss: C:\Codes\New\app\globals.css "." is not exported under the 
+condition "style" from package C:\Codes\New\node_modules\@tailwindcss\postcss (see exports 
+field in C:\Codes\New\node_modules\@tailwindcss\postcss\package.json)
+
+[1m[31m>[39m[22m[90m 1 | [39m[36m@import[39m 
+[32m'@tailwindcss/postcss'[39m[33m;[39m
+ [90m   | [39m[1m[31m^[39m[22m
+ [90m 2 | [39m[36m@import[39m [32m'tw-animate-css'[39m[33m;[39m
+ [90m 3 | [39m
+
+./app/globals.css
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The 
+PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with 
+PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    at ft (C:\Codes\New\node_modules\.pnpm\tailwindcss@4.2.4\node_modules\tailwindcss\dist\l
+ib.js:38:1643)
+    at LazyResult.runOnRoot (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\pos
+tcss\lib\lazy-result.js:329:16)
+    at LazyResult.runAsync (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\post
+css\lib\lazy-result.js:258:26)
+    at LazyResult.async (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\postcss
+\lib\lazy-result.js:160:30)
+    at LazyResult.then (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\postcss\
+lib\lazy-result.js:404:17)
+    at tryRunOrWebpackError (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_re
+act@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:316142)
+    at __webpack_require_module__ (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.
+3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:131548)
+    at __nested_webpack_require_161494__ (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-
+dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:
+130983)
+    at C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1__react@18.3
+.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:131840
+    at symbolIterator (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18
+.3.1__react@18.3.1\node_modules\next\dist\compiled\neo-async\async.js:1:14444)
+    at done (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1__reac
+t@18.3.1\node_modules\next\dist\compiled\neo-async\async.js:1:14824)
+    at Hook.eval [as callAsync] (eval at create (C:\Codes\New\node_modules\.pnpm\next@15.2.2
+_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5
+.js:14:9224), <anonymous>:15:1)
+    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (C:\Codes\New\node_modules\.pnpm\next@15.2.2
+_react-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5
+.js:14:6378)
+    at C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1__react@18.3
+.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:130703
+    at symbolIterator (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18
+.3.1__react@18.3.1\node_modules\next\dist\compiled\neo-async\async.js:1:14402)
+-- inner error --
+Error: It looks like you're trying to use `tailwindcss` directly as a PostCSS plugin. The 
+PostCSS plugin has moved to a separate package, so to continue using Tailwind CSS with 
+PostCSS you'll need to install `@tailwindcss/postcss` and update your PostCSS configuration.
+    at ft (C:\Codes\New\node_modules\.pnpm\tailwindcss@4.2.4\node_modules\tailwindcss\dist\l
+ib.js:38:1643)
+    at LazyResult.runOnRoot (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\pos
+tcss\lib\lazy-result.js:329:16)
+    at LazyResult.runAsync (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\post
+css\lib\lazy-result.js:258:26)
+    at LazyResult.async (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\postcss
+\lib\lazy-result.js:160:30)
+    at LazyResult.then (C:\Codes\New\node_modules\.pnpm\postcss@8.4.31\node_modules\postcss\
+lib\lazy-result.js:404:17)
+    at Object.<anonymous> (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_reac
+t@18.3.1__react@18.3.1\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js?
+?ruleSet[1].rules[13].oneOf[10].use[2]!C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom
+@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\build\webpack\loaders\postcss-load
+er\src\index.js??ruleSet[1].rules[13].oneOf[10].use[3]!C:\Codes\New\app\globals.css:1:7)
+    at C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1__react@18.3
+.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:962742
+    at Hook.eval [as call] (eval at create (C:\Codes\New\node_modules\.pnpm\next@15.2.2_reac
+t-dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:1
+4:9002), <anonymous>:7:1)
+    at Hook.CALL_DELEGATE [as _call] (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@
+18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:14:6272
+)
+    at C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1__react@18.3
+.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:131581
+    at tryRunOrWebpackError (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_re
+act@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:316096)
+    at __webpack_require_module__ (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.
+3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:131548)
+    at __nested_webpack_require_161494__ (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-
+dom@18.3.1_react@18.3.1__react@18.3.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:
+130983)
+    at C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1__react@18.3
+.1\node_modules\next\dist\compiled\webpack\bundle5.js:29:131840
+    at symbolIterator (C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18
+.3.1__react@18.3.1\node_modules\next\dist\compiled\neo-async\async.js:1:14444)
+
+Generated code for C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_react@18.3.1
+__react@18.3.1\node_modules\next\dist\build\webpack\loaders\css-loader\src\index.js??ruleSet
+[1].rules[13].oneOf[10].use[2]!C:\Codes\New\node_modules\.pnpm\next@15.2.2_react-dom@18.3.1_
+react@18.3.1__react@18.3.1\node_modules\next\dist\build\webpack\loaders\postcss-loader\src\i
+ndex.js??ruleSet[1].rules[13].oneOf[10].use[3]!C:\Codes\New\app\globals.css
+
+Import trace for requested module:
+./app/globals.css
+
+
+> Build failed because of webpack errors
