@@ -511,6 +511,20 @@ export function EnrollmentManagement() {
         {/* TABLE (FULL ORIGINAL KEPT) */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-white">
+            <thead>
+              <tr className="border-b border-gray-700 bg-gray-800/50">
+                <th className="py-3 px-4 text-left text-gray-300">Student</th>
+                <th className="py-3 px-4 text-left text-gray-300">Course</th>
+                <th className="py-3 px-4 text-center text-gray-300">Prelim</th>
+                <th className="py-3 px-4 text-center text-gray-300">Midterm</th>
+                <th className="py-3 px-4 text-center text-gray-300">Final</th>
+                <th className="py-3 px-4 text-center text-gray-300">Average</th>
+                <th className="py-3 px-4 text-center text-gray-300">Grade</th>
+                <th className="py-3 px-4 text-center text-gray-300">Status</th>
+                <th className="py-3 px-4 text-center text-gray-300">Semester</th>
+                <th className="py-3 px-4 text-center text-gray-300">Actions</th>
+              </tr>
+            </thead>
             <tbody>
               {paginated.map((enroll) => (
                 <tr key={enroll.id} className="border-b border-gray-800 hover:bg-gray-800/50">
@@ -537,18 +551,42 @@ export function EnrollmentManagement() {
                   </td>
                   <td className="py-3 px-4 text-center text-gray-400 text-xs">{enroll.semester}</td>
                   <td className="py-3 px-4 text-center">
-                    {enroll.status === 'pending' && (
-                      <div className="space-x-1">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onUpdateStatus(enroll.id, 'enrolled')}>Approve</Button>
-                        <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:text-red-300" onClick={() => onUpdateStatus(enroll.id, 'dropped')}>Reject</Button>
-                      </div>
-                    )}
+                    <div className="space-x-1 flex items-center justify-center">
+                      {editingId !== enroll.id && (
+                        <Button size="sm" variant="outline" className="border-blue-600 text-blue-400 hover:text-blue-300" onClick={() => onStartEdit(enroll)}>
+                          <Edit className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
+                      )}
+                      {enroll.status === 'pending' && (
+                        <>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onUpdateStatus(enroll.id, 'enrolled')}>Approve</Button>
+                          <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:text-red-300" onClick={() => onUpdateStatus(enroll.id, 'dropped')}>Reject</Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-400">
+              Page {currentPage} of {totalPages} ({filteredEnrollments.length} total)
+            </p>
+            <div className="flex gap-2">
+              <Button disabled={currentPage === 1} onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} variant="outline" className="border-gray-700 text-gray-200 hover:bg-gray-700">
+                Previous
+              </Button>
+              <Button disabled={currentPage === totalPages} onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} variant="outline" className="border-gray-700 text-gray-200 hover:bg-gray-700">
+                Next
+              </Button>
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-red-400">{error}</p>}
       </CardContent>

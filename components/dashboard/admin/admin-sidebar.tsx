@@ -35,7 +35,6 @@ export function AdminSidebar({ activeSection, onSectionChange }: AdminSidebarPro
     { id: 'attendance', label: 'Attendance', icon: Clock },
     { id: 'grade-scales', label: 'Grade Scales', icon: Percent },
     { id: 'course-prerequisites', label: 'Course Prerequisites', icon: GitBranch },
-    { id: 'academic-history', label: 'Academic History', icon: BookMarked },
     { id: 'documents', label: 'Student Documents', icon: FileCheckIcon },
     { id: 'organizations', label: 'Organizations', icon: Users2 },
     { id: 'medical-records', label: 'Medical Records', icon: HeartPulse },

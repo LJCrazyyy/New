@@ -12,7 +12,7 @@ import { CounselingRecords } from './counseling-records'
 import { DisciplineRecords } from './discipline-records'
 import { StudentOrganizations } from './student-organizations'
 import { StudentDocuments } from './student-documents'
-import { AcademicHistory } from './academic-history'
+import { AllActivities } from './all-activities'
 import { Sidebar } from './sidebar'
 import type { UserData } from '@/components/login-page'
 
@@ -139,7 +139,6 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
       'courses',
       'activities',
       'grades',
-      'academic-history',
       'health',
       'counseling',
       'discipline',
@@ -252,9 +251,9 @@ export function StudentDashboard({ currentUser, onLogout }: StudentDashboardProp
           )}
           
           {activeSection === 'courses' && <CurrentCourses courses={data?.currentCourses ?? []} studentId={currentUser.id} />}
-          {activeSection === 'activities' && <CurrentCourses courses={data?.activityCourses ?? []} studentId={currentUser.id} fullWidth initialCourseId={queryCourse} />}
+            {activeSection === 'activities' && !queryCourse && <AllActivities courses={data?.currentCourses ?? []} studentId={currentUser.id} />}
+            {activeSection === 'activities' && queryCourse && <CurrentCourses courses={data?.currentCourses ?? []} studentId={currentUser.id} fullWidth initialCourseId={queryCourse} />}
           {activeSection === 'grades' && <RecentGrades grades={data?.recentGrades ?? []} progress={data?.progress} student={data?.student} profile={data?.profile} fullWidth />}
-          {activeSection === 'academic-history' && <AcademicHistory activities={data?.academicHistory ?? []} />}
           {activeSection === 'health' && <MedicalRecords studentId={currentUser.id} records={data?.medicalRecords ?? []} />}
           {activeSection === 'counseling' && <CounselingRecords studentId={currentUser.id} sessions={data?.counselingRecords ?? []} />}
           {activeSection === 'discipline' && <DisciplineRecords studentId={currentUser.id} records={data?.disciplineRecords ?? []} />}

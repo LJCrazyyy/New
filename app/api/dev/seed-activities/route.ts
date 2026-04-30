@@ -11,11 +11,15 @@ export async function POST() {
   try {
     await connectToDatabase()
 
-    // Sample lecture activities
-    const sampleLectures = [
+    // Clear existing activities
+    await CourseActivity.deleteMany({})
+
+    // Test data for all courses with various activity types
+    const sampleActivities = [
+      // CS101 - Introduction to Programming
       {
-        course: '69ebd16637c3a565a9e152df', // CS101
-        faculty: '69ebd16637c3a565a9e1514c', // Dr. Maria Garcia
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
         title: 'Introduction to Programming Concepts',
         description: 'Overview of basic programming principles, algorithms, and problem-solving techniques.',
         type: 'lecture',
@@ -24,8 +28,38 @@ export async function POST() {
         dueDate: null,
       },
       {
-        course: '69ebd16637c3a565a9e152df', // CS101
-        faculty: '69ebd16637c3a565a9e1514c', // Dr. Maria Garcia
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
+        title: 'Programming Basics Assignment 1',
+        description: 'Write a simple program that demonstrates variables and operators.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/cs101-assignment1',
+        points: 25,
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
+        title: 'Variables and Data Types Quiz',
+        description: 'Test your understanding of variables, data types, and basic operations.',
+        type: 'quiz',
+        contentUrl: 'https://example.com/cs101-quiz1',
+        points: 15,
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
+        title: 'Practice Problem Set: Control Structures',
+        description: 'Complete the practice problems on if-else statements and loops.',
+        type: 'task',
+        contentUrl: 'https://example.com/cs101-task1',
+        points: 10,
+        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
         title: 'Variables and Data Types',
         description: 'Understanding variables, data types, and basic operations in programming.',
         type: 'lecture',
@@ -34,8 +68,8 @@ export async function POST() {
         dueDate: null,
       },
       {
-        course: '69ebd16637c3a565a9e152df', // CS101
-        faculty: '69ebd16637c3a565a9e1514c', // Dr. Maria Garcia
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
         title: 'Control Structures',
         description: 'Conditional statements, loops, and flow control in programming.',
         type: 'lecture',
@@ -44,8 +78,30 @@ export async function POST() {
         dueDate: null,
       },
       {
-        course: '69ebd16637c3a565a9e152e0', // CS301
-        faculty: '69ebd16637c3a565a9e1514d', // Prof. Jose Garcia
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
+        title: 'Programming Basics Assignment 2',
+        description: 'Create a program using loops and conditionals.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/cs101-assignment2',
+        points: 30,
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152df',
+        faculty: '69ebd16637c3a565a9e1514c',
+        title: 'Control Flow Quiz',
+        description: 'Test your knowledge on if statements, loops, and flow control.',
+        type: 'quiz',
+        contentUrl: 'https://example.com/cs101-quiz2',
+        points: 20,
+        dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      },
+
+      // CS301 - Data Structures
+      {
+        course: '69ebd16637c3a565a9e152e0',
+        faculty: '69ebd16637c3a565a9e1514d',
         title: 'Arrays and Linked Lists',
         description: 'Implementation and usage of arrays and linked lists in data structures.',
         type: 'lecture',
@@ -54,8 +110,38 @@ export async function POST() {
         dueDate: null,
       },
       {
-        course: '69ebd16637c3a565a9e152e0', // CS301
-        faculty: '69ebd16637c3a565a9e1514d', // Prof. Jose Garcia
+        course: '69ebd16637c3a565a9e152e0',
+        faculty: '69ebd16637c3a565a9e1514d',
+        title: 'Implement a Linked List',
+        description: 'Create a linked list class with insert, delete, and search operations.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/cs301-assignment1',
+        points: 40,
+        dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e0',
+        faculty: '69ebd16637c3a565a9e1514d',
+        title: 'Data Structures Basics Quiz',
+        description: 'Test knowledge on arrays, linked lists, and their complexities.',
+        type: 'quiz',
+        contentUrl: 'https://example.com/cs301-quiz1',
+        points: 25,
+        dueDate: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e0',
+        faculty: '69ebd16637c3a565a9e1514d',
+        title: 'Lab: Array Operations',
+        description: 'Practice manipulating arrays and analyzing time complexity.',
+        type: 'task',
+        contentUrl: 'https://example.com/cs301-task1',
+        points: 15,
+        dueDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e0',
+        faculty: '69ebd16637c3a565a9e1514d',
         title: 'Stacks and Queues',
         description: 'Understanding stack and queue data structures and their applications.',
         type: 'lecture',
@@ -64,8 +150,30 @@ export async function POST() {
         dueDate: null,
       },
       {
-        course: '69ebd16637c3a565a9e152e1', // CS401
-        faculty: '69ebd16637c3a565a9e1514e', // Mr. Ana Garcia
+        course: '69ebd16637c3a565a9e152e0',
+        faculty: '69ebd16637c3a565a9e1514d',
+        title: 'Implement Stack and Queue',
+        description: 'Create stack and queue classes and implement real-world applications.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/cs301-assignment2',
+        points: 45,
+        dueDate: new Date(Date.now() + 16 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e0',
+        faculty: '69ebd16637c3a565a9e1514d',
+        title: 'Trees and Graphs Lecture',
+        description: 'Introduction to tree and graph data structures.',
+        type: 'lecture',
+        contentUrl: 'https://example.com/cs301-lecture3',
+        points: 0,
+        dueDate: null,
+      },
+
+      // CS401 - Database Management
+      {
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
         title: 'Relational Database Design',
         description: 'Principles of database design, normalization, and ER diagrams.',
         type: 'lecture',
@@ -74,8 +182,38 @@ export async function POST() {
         dueDate: null,
       },
       {
-        course: '69ebd16637c3a565a9e152e1', // CS401
-        faculty: '69ebd16637c3a565a9e1514e', // Mr. Ana Garcia
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
+        title: 'Design a Database Schema',
+        description: 'Create a normalized database schema for a given business scenario.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/cs401-assignment1',
+        points: 35,
+        dueDate: new Date(Date.now() + 8 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
+        title: 'Database Design Quiz',
+        description: 'Test your knowledge on ER diagrams and normalization.',
+        type: 'quiz',
+        contentUrl: 'https://example.com/cs401-quiz1',
+        points: 20,
+        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
+        title: 'Lab: ER Diagram Creation',
+        description: 'Create ER diagrams for various business domains.',
+        type: 'task',
+        contentUrl: 'https://example.com/cs401-task1',
+        points: 12,
+        dueDate: new Date(Date.now() + 6 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
         title: 'SQL Fundamentals',
         description: 'Basic SQL queries, joins, and database operations.',
         type: 'lecture',
@@ -83,20 +221,166 @@ export async function POST() {
         points: 0,
         dueDate: null,
       },
+      {
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
+        title: 'SQL Query Assignment',
+        description: 'Write SQL queries for complex data retrieval scenarios.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/cs401-assignment2',
+        points: 40,
+        dueDate: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
+        title: 'Advanced Database Topics',
+        description: 'Indexing, transactions, and optimization techniques.',
+        type: 'lecture',
+        contentUrl: 'https://example.com/cs401-lecture3',
+        points: 0,
+        dueDate: null,
+      },
+      {
+        course: '69ebd16637c3a565a9e152e1',
+        faculty: '69ebd16637c3a565a9e1514e',
+        title: 'SQL Mastery Quiz',
+        description: 'Comprehensive quiz on SQL queries and database operations.',
+        type: 'quiz',
+        contentUrl: 'https://example.com/cs401-quiz2',
+        points: 25,
+        dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      },
+
+      // MATH101 - Calculus I
+      {
+        course: '69ebd16637c3a565a9e152e2',
+        faculty: '69ebd16637c3a565a9e1514f',
+        title: 'Limits and Continuity',
+        description: 'Understanding limits, continuity, and the formal definition of a limit.',
+        type: 'lecture',
+        contentUrl: 'https://example.com/math101-lecture1',
+        points: 0,
+        dueDate: null,
+      },
+      {
+        course: '69ebd16637c3a565a9e152e2',
+        faculty: '69ebd16637c3a565a9e1514f',
+        title: 'Limit Problems Assignment',
+        description: 'Solve problems on computing and analyzing limits.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/math101-assignment1',
+        points: 30,
+        dueDate: new Date(Date.now() + 9 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e2',
+        faculty: '69ebd16637c3a565a9e1514f',
+        title: 'Limits and Continuity Quiz',
+        description: 'Test your understanding of limits and continuity concepts.',
+        type: 'quiz',
+        contentUrl: 'https://example.com/math101-quiz1',
+        points: 15,
+        dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e2',
+        faculty: '69ebd16637c3a565a9e1514f',
+        title: 'Derivatives and Differentiation',
+        description: 'Introduction to derivatives and rules of differentiation.',
+        type: 'lecture',
+        contentUrl: 'https://example.com/math101-lecture2',
+        points: 0,
+        dueDate: null,
+      },
+      {
+        course: '69ebd16637c3a565a9e152e2',
+        faculty: '69ebd16637c3a565a9e1514f',
+        title: 'Derivative Calculation Practice',
+        description: 'Practice problems on computing derivatives using various rules.',
+        type: 'task',
+        contentUrl: 'https://example.com/math101-task1',
+        points: 10,
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e2',
+        faculty: '69ebd16637c3a565a9e1514f',
+        title: 'Derivative Applications Assignment',
+        description: 'Apply derivatives to optimize functions and model real-world scenarios.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/math101-assignment2',
+        points: 35,
+        dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      },
+
+      // ENG102 - English Literature
+      {
+        course: '69ebd16637c3a565a9e152e3',
+        faculty: '69ebd16637c3a565a9e15150',
+        title: 'Shakespeare: Life and Times',
+        description: 'Overview of Shakespeare\'s life, works, and cultural impact.',
+        type: 'lecture',
+        contentUrl: 'https://example.com/eng102-lecture1',
+        points: 0,
+        dueDate: null,
+      },
+      {
+        course: '69ebd16637c3a565a9e152e3',
+        faculty: '69ebd16637c3a565a9e15150',
+        title: 'Essay: Analysis of Hamlet',
+        description: 'Write an analytical essay on themes, characters, and symbolism in Hamlet.',
+        type: 'assignment',
+        contentUrl: 'https://example.com/eng102-assignment1',
+        points: 50,
+        dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e3',
+        faculty: '69ebd16637c3a565a9e15150',
+        title: 'Literature Comprehension Quiz',
+        description: 'Test your understanding of key literary concepts and works.',
+        type: 'quiz',
+        contentUrl: 'https://example.com/eng102-quiz1',
+        points: 20,
+        dueDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e3',
+        faculty: '69ebd16637c3a565a9e15150',
+        title: 'Reading Discussion: Romeo and Juliet',
+        description: 'Participate in discussion on themes and character development.',
+        type: 'task',
+        contentUrl: 'https://example.com/eng102-task1',
+        points: 15,
+        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+      {
+        course: '69ebd16637c3a565a9e152e3',
+        faculty: '69ebd16637c3a565a9e15150',
+        title: 'Modern Literature',
+        description: 'Contemporary literature and its relevance to modern society.',
+        type: 'lecture',
+        contentUrl: 'https://example.com/eng102-lecture2',
+        points: 0,
+        dueDate: null,
+      },
     ]
 
-    // Insert the sample lectures
-    const result = await CourseActivity.insertMany(sampleLectures)
+    // Insert all activities
+    const result = await CourseActivity.insertMany(sampleActivities)
 
     return Response.json({
       success: true,
-      message: 'Sample lecture activities seeded successfully.',
+      message: 'Sample activities seeded successfully.',
       result: {
         insertedCount: result.length,
-        lectures: sampleLectures.map((lecture, index) => ({
-          ...lecture,
-          _id: result[index]._id,
-        })),
+        activities: {
+          lectures: result.filter((_, i) => sampleActivities[i].type === 'lecture').length,
+          assignments: result.filter((_, i) => sampleActivities[i].type === 'assignment').length,
+          quizzes: result.filter((_, i) => sampleActivities[i].type === 'quiz').length,
+          tasks: result.filter((_, i) => sampleActivities[i].type === 'task').length,
+        },
       },
     })
   } catch (error) {

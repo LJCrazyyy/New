@@ -10,8 +10,7 @@ import {
   MessageCircle, 
   AlertTriangle, 
   Users, 
-  FileCheck,
-  History
+  FileCheck
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -25,7 +24,6 @@ export function Sidebar({ activeSection, onSectionChange }: SidebarProps) {
     { id: 'courses', label: 'My Courses', icon: BookOpen },
     { id: 'activities', label: 'Activities', icon: FileText },
     { id: 'grades', label: 'Grades', icon: FileText },
-    { id: 'academic-history', label: 'Academic History', icon: History },
     { id: 'health', label: 'Medical Records', icon: Heart },
     { id: 'counseling', label: 'Counseling', icon: MessageCircle },
     { id: 'discipline', label: 'Discipline Records', icon: AlertTriangle },

@@ -17,7 +17,6 @@ import { StudentProfileManagement } from './admin/student-profile-management'
 import { FacultyProfileManagement } from './admin/faculty-profile-management'
 import { StudentDocumentManagement } from './admin/student-document-management'
 import { StudentOrganizationManagement } from './admin/student-organization-management'
-import { AcademicHistoryManagement } from './admin/academic-history-management'
 import { AttendanceManagement } from './admin/attendance-management'
 import { GradeScaleManagement } from './admin/grade-scale-management'
 import { CoursePrerequisiteManagement } from './admin/course-prerequisite-management'
@@ -43,7 +42,6 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
       'enrollment',
       'documents',
       'organizations',
-      'academic-history',
       'attendance',
       'grade-scales',
       'course-prerequisites',
@@ -102,8 +100,7 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
           {activeSection === 'documents' && <StudentDocumentManagement />}
           {activeSection === 'organizations' && <StudentOrganizationManagement />}
           {activeSection === 'academic-history' && <AcademicHistoryManagement />}
-          {activeSection === 'attendance' && <AttendanceManagement />}
-          {activeSection === 'grade-scales' && <GradeScaleManagement />}
+          {activeSection === 'arade-scales' && <GradeScaleManagement />}
           {activeSection === 'course-prerequisites' && <CoursePrerequisiteManagement />}
           {activeSection === 'medical-records' && <MedicalRecordManagement />}
           {activeSection === 'discipline-records' && <DisciplineRecordManagement />}

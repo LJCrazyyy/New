@@ -77,16 +77,6 @@ export const apiResources: Record<string, ApiResourceConfig> = {
       },
     ],
   },
-  'academic-history': {
-    model: AcademicHistory,
-    searchableFields: ['type', 'description', 'details'],
-    defaultSort: '-recordedAt',
-    defaultPopulate: [
-      { path: 'student', select: 'systemId name email role status' },
-      { path: 'relatedCourse', select: 'code name section semester room units' },
-      { path: 'createdBy', select: 'systemId name email role status' },
-    ],
-  },
   'medical-records': {
     model: MedicalRecord,
     searchableFields: ['title', 'category', 'notes', 'status'],
