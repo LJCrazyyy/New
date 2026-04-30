@@ -6,6 +6,7 @@ import { LoginPage, type UserData } from '@/components/login-page'
 import { StudentDashboard } from '@/components/dashboard/student-dashboard'
 import { FacultyDashboard } from '@/components/dashboard/faculty-dashboard'
 import { AdminDashboard } from '@/components/dashboard/admin-dashboard'
+import { initializeFirebase } from '@/lib/firebase'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ?? ''
 
@@ -19,52 +20,56 @@ export default function Page() {
   const [currentUser, setCurrentUser] = useState<UserData | null>(null)
 
   useEffect(() => {
+    initializeFirebase()
+  }, [])
+
+  useEffect(() => {
     let isMounted = true
 
     const restoreSession = async () => {
-    try {
-      const rawSession = localStorage.getItem(SESSION_STORAGE_KEY)
-      if (!rawSession) {
-        return
-      }
-
-      const parsedSession = JSON.parse(rawSession) as UserData
-      if (!parsedSession?.id || !parsedSession?.role || !parsedSession?.email) {
-        return
-      }
-
-      let resolvedSession = parsedSession
-
       try {
-        const response = await fetch(
-          `/api/users?email=${encodeURIComponent(parsedSession.email)}&role=${parsedSession.role}&limit=1`
-        )
-        const payload = await response.json()
-        const matchedUser = Array.isArray(payload?.data) ? payload.data[0] : null
-
-        if (response.ok && payload?.success && matchedUser) {
-          resolvedSession = {
-            id: matchedUser.id || matchedUser.systemId || parsedSession.id,
-            name: matchedUser.name || parsedSession.name,
-            email: matchedUser.email || parsedSession.email,
-            role: matchedUser.role || parsedSession.role,
-          }
+        const rawSession = localStorage.getItem(SESSION_STORAGE_KEY)
+        if (!rawSession) {
+          return
         }
+
+        const parsedSession = JSON.parse(rawSession) as UserData
+        if (!parsedSession?.id || !parsedSession?.role || !parsedSession?.email) {
+          return
+        }
+
+        let resolvedSession = parsedSession
+
+        try {
+          const response = await fetch(
+            `/api/users?email=${encodeURIComponent(parsedSession.email)}&role=${parsedSession.role}&limit=1`
+          )
+          const payload = await response.json()
+          const matchedUser = Array.isArray(payload?.data) ? payload.data[0] : null
+
+          if (response.ok && payload?.success && matchedUser) {
+            resolvedSession = {
+              id: matchedUser.id || matchedUser.systemId || parsedSession.id,
+              name: matchedUser.name || parsedSession.name,
+              email: matchedUser.email || parsedSession.email,
+              role: matchedUser.role || parsedSession.role,
+            }
+          }
+        } catch {
+          // Keep parsed session when live lookup fails.
+        }
+
+        if (!isMounted) {
+          return
+        }
+
+        setCurrentUser(resolvedSession)
+        setSelectedRole(resolvedSession.role)
+        setAppState('dashboard')
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(resolvedSession))
       } catch {
-        // Keep parsed session when live lookup fails.
+        localStorage.removeItem(SESSION_STORAGE_KEY)
       }
-
-      if (!isMounted) {
-        return
-      }
-
-      setCurrentUser(resolvedSession)
-      setSelectedRole(resolvedSession.role)
-      setAppState('dashboard')
-      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(resolvedSession))
-    } catch {
-      localStorage.removeItem(SESSION_STORAGE_KEY)
-    }
 
     }
 
