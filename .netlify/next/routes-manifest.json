@@ -1,0 +1,159 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    }
+  ],
+  "headers": [],
+  "onMatchHeaders": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/dashboard/admin/[adminId]",
+      "regex": "^/api/dashboard/admin/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPadminId": "nxtPadminId"
+      },
+      "namedRegex": "^/api/dashboard/admin/(?<nxtPadminId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/faculty/[facultyId]",
+      "regex": "^/api/dashboard/faculty/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPfacultyId": "nxtPfacultyId"
+      },
+      "namedRegex": "^/api/dashboard/faculty/(?<nxtPfacultyId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/student/[studentId]",
+      "regex": "^/api/dashboard/student/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPstudentId": "nxtPstudentId"
+      },
+      "namedRegex": "^/api/dashboard/student/(?<nxtPstudentId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/[notificationId]",
+      "regex": "^/api/notifications/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPnotificationId": "nxtPnotificationId"
+      },
+      "namedRegex": "^/api/notifications/(?<nxtPnotificationId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/[collection]/[[...params]]",
+      "regex": "^/api/([^/]+?)(?:/(.+?))?(?:/)?$",
+      "routeKeys": {
+        "nxtPcollection": "nxtPcollection",
+        "nxtPparams": "nxtPparams"
+      },
+      "namedRegex": "^/api/(?<nxtPcollection>[^/]+?)(?:/(?<nxtPparams>.+?))?(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/api/auth/login",
+      "regex": "^/api/auth/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/auth/login(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/admin/overview",
+      "regex": "^/api/dashboard/admin/overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dashboard/admin/overview(?:/)?$"
+    },
+    {
+      "page": "/api/dev/seed-activities",
+      "regex": "^/api/dev/seed\\-activities(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dev/seed\\-activities(?:/)?$"
+    },
+    {
+      "page": "/api/dev/seed-mongodb",
+      "regex": "^/api/dev/seed\\-mongodb(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dev/seed\\-mongodb(?:/)?$"
+    },
+    {
+      "page": "/api/dev/seed-students",
+      "regex": "^/api/dev/seed\\-students(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dev/seed\\-students(?:/)?$"
+    },
+    {
+      "page": "/api/enrollments",
+      "regex": "^/api/enrollments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/enrollments(?:/)?$"
+    },
+    {
+      "page": "/api/notifications",
+      "regex": "^/api/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications(?:/)?$"
+    },
+    {
+      "page": "/api/student-documents/upload",
+      "regex": "^/api/student\\-documents/upload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student\\-documents/upload(?:/)?$"
+    },
+    {
+      "page": "/api/uploads",
+      "regex": "^/api/uploads(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/uploads(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

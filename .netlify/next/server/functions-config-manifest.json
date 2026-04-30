@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/[collection]/[[...params]]": {},
+    "/api/auth/login": {},
+    "/api/dashboard/admin/[adminId]": {},
+    "/api/dashboard/admin/overview": {},
+    "/api/dashboard/faculty/[facultyId]": {},
+    "/api/dashboard/student/[studentId]": {},
+    "/api/dev/seed-activities": {},
+    "/api/dev/seed-mongodb": {},
+    "/api/dev/seed-students": {},
+    "/api/enrollments": {},
+    "/api/notifications": {},
+    "/api/notifications/[notificationId]": {}
+  }
+}

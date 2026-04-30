@@ -1,0 +1,3 @@
+{
+  "/api/dev/seed-mongodb/route": "app/api/dev/seed-mongodb/route.js"
+}
