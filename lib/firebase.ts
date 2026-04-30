@@ -13,16 +13,36 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 }
 
+const requiredConfigKeys = [
+  'apiKey',
+  'authDomain',
+  'projectId',
+  'storageBucket',
+  'messagingSenderId',
+  'appId',
+] as const
+
 let analyticsPromise: Promise<Analytics | null> | null = null
 
 export function initializeFirebase() {
-  const hasConfig = Object.values(firebaseConfig).every(Boolean)
+  const hasRequiredConfig = requiredConfigKeys.every(
+    (key) => Boolean(firebaseConfig[key])
+  )
 
-  if (!hasConfig) {
+  if (!hasRequiredConfig) {
     return { app: null, analytics: null }
   }
 
-  const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
+  const app = getApps().length
+    ? getApp()
+    : initializeApp({
+        apiKey: firebaseConfig.apiKey as string,
+        authDomain: firebaseConfig.authDomain as string,
+        projectId: firebaseConfig.projectId as string,
+        storageBucket: firebaseConfig.storageBucket as string,
+        messagingSenderId: firebaseConfig.messagingSenderId as string,
+        appId: firebaseConfig.appId as string,
+      })
 
   if (!analyticsPromise) {
     analyticsPromise = isSupported().then((supported) => {
