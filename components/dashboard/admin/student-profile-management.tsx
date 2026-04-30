@@ -28,6 +28,7 @@ type StudentProfileForm = {
   course: string
   section: string
   yearLevel: string
+  assignDefaultCourses?: boolean
 }
 
 const initialForm: StudentProfileForm = {
@@ -35,6 +36,7 @@ const initialForm: StudentProfileForm = {
   course: '',
   section: '',
   yearLevel: '1st Year',
+  assignDefaultCourses: true,
 }
 
 const yearLevels = ['1st Year', '2nd Year', '3rd Year', '4th Year', '5th Year']
@@ -235,6 +237,14 @@ export function StudentProfileManagement() {
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
+            <label className="flex items-center gap-2 text-sm text-gray-300">
+              <input
+                type="checkbox"
+                checked={Boolean(createForm.assignDefaultCourses)}
+                onChange={(e) => setCreateForm((p) => ({ ...p, assignDefaultCourses: e.target.checked }))}
+              />
+              <span>Assign default courses for current semester</span>
+            </label>
             <div className="md:col-span-4 flex justify-end">
               <Button type="submit" disabled={isSaving} className="bg-green-600 hover:bg-green-700">{isSaving ? 'Saving...' : 'Create Profile'}</Button>
             </div>

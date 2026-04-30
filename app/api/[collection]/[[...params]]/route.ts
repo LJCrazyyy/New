@@ -11,7 +11,7 @@ import {
   parseJsonBody,
   serializeRecord,
 } from '@/lib/api-resources'
-import { Course, Enrollment } from '@/lib/system-models'
+import { Course, Enrollment, SystemSetting } from '@/lib/system-models'
 
 export const runtime = 'nodejs'
 
@@ -242,6 +242,55 @@ export async function POST(request: NextRequest, context: RouteContext) {
     const createdRecord = Array.isArray(body)
       ? await resource.model.insertMany(body)
       : await resource.model.create(body)
+
+    // If a student profile was created and the client requested default course assignment,
+    // enroll the new student into a small set of courses for the current semester.
+    try {
+      if (resource && resource.model && resource.model.modelName === 'StudentProfile') {
+        const profile = Array.isArray(createdRecord) ? createdRecord[0] : createdRecord
+        const assignDefault = Boolean(body?.assignDefaultCourses)
+
+        if (profile && assignDefault && profile.user) {
+          const setting = await SystemSetting.findOne({ key: 'currentSemester' }).select('value')
+          const semester = String(setting?.value ?? '')
+
+          if (semester) {
+            const defaultCourses = await Course.find({ semester }).limit(4).select('_id')
+
+            if (defaultCourses.length > 0) {
+              const ops = defaultCourses.map((c) => ({
+                updateOne: {
+                  filter: { student: profile.user, course: c._id, semester },
+                  update: {
+                    $set: {
+                      student: profile.user,
+                      course: c._id,
+                      semester,
+                      status: 'enrolled',
+                    },
+                  },
+                  upsert: true,
+                },
+              }))
+
+              await Enrollment.bulkWrite(ops, { ordered: false })
+
+              // Sync enrolled counts for affected courses
+              await Promise.all(
+                defaultCourses.map(async (c) => {
+                  const count = await Enrollment.countDocuments({ course: c._id, semester, status: { $in: ['enrolled', 'pending'] } })
+                  await Course.updateOne({ _id: c._id }, { $set: { enrolledCount: Math.min(count, 50) } })
+                })
+              )
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Don't fail the main create request if assignment fails; log to server console.
+      // eslint-disable-next-line no-console
+      console.error('Failed to auto-assign courses to new student profile:', e)
+    }
 
     const populatedRecord = await applyPopulate(
       resource.model,
