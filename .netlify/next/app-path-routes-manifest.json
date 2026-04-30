@@ -1,0 +1,19 @@
+{
+  "/_global-error/page": "/_global-error",
+  "/_not-found/page": "/_not-found",
+  "/api/[collection]/[[...params]]/route": "/api/[collection]/[[...params]]",
+  "/api/auth/login/route": "/api/auth/login",
+  "/api/dashboard/admin/[adminId]/route": "/api/dashboard/admin/[adminId]",
+  "/api/dashboard/admin/overview/route": "/api/dashboard/admin/overview",
+  "/api/dashboard/faculty/[facultyId]/route": "/api/dashboard/faculty/[facultyId]",
+  "/api/dashboard/student/[studentId]/route": "/api/dashboard/student/[studentId]",
+  "/api/dev/seed-activities/route": "/api/dev/seed-activities",
+  "/api/dev/seed-mongodb/route": "/api/dev/seed-mongodb",
+  "/api/dev/seed-students/route": "/api/dev/seed-students",
+  "/api/enrollments/route": "/api/enrollments",
+  "/api/notifications/[notificationId]/route": "/api/notifications/[notificationId]",
+  "/api/notifications/route": "/api/notifications",
+  "/api/student-documents/upload/route": "/api/student-documents/upload",
+  "/api/uploads/route": "/api/uploads",
+  "/page": "/"
+}
