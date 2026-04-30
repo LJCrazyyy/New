@@ -21,6 +21,12 @@ type AdminOverviewPayload = {
   }>
 }
 
+const MAX_STUDENTS_PER_COURSE = 50
+
+function normalizeCourseValue(value: number) {
+  return Math.min(Math.max(Number(value ?? 0), 0), MAX_STUDENTS_PER_COURSE)
+}
+
 export function AdminOverview() {
   const [payload, setPayload] = useState<AdminOverviewPayload | null>(null)
   const [error, setError] = useState('')
@@ -52,12 +58,6 @@ export function AdminOverview() {
         if (mounted) {
           setIsLoading(false)
         }
-      }
-
-      const MAX_STUDENTS_PER_COURSE = 50
-
-      function normalizeCourseValue(value: number) {
-        return Math.min(Math.max(Number(value ?? 0), 0), MAX_STUDENTS_PER_COURSE)
       }
     }
 
