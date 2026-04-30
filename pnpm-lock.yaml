@@ -163,8 +163,8 @@ importers:
         version: 3.25.76
     devDependencies:
       '@netlify/plugin-nextjs':
-        specifier: ^5.15.9
-        version: 5.15.9
+        specifier: ^5.15.10
+        version: 5.15.10
       '@tailwindcss/postcss':
         specifier: ^4.2.0
         version: 4.2.4
@@ -362,8 +362,8 @@ packages:
   '@mongodb-js/saslprep@1.4.9':
     resolution: {integrity: sha512-RXSxsokhAF/4nWys8An8npsqOI33Ex1Hlzqjw2pZOO+GKtMAR2noGnUdsFiGwsaO/xXI+56mtjTmDA3JXJsvmA==}
 
-  '@netlify/plugin-nextjs@5.15.9':
-    resolution: {integrity: sha512-4kJvV+wrt4/ncehfaOXfhv1FYKCv9EFjq6/tgXXYSlqPDcbsuTXR0DTz9IvyZ/CpPRadRD/zzIqD9wXgCmA2lg==}
+  '@netlify/plugin-nextjs@5.15.10':
+    resolution: {integrity: sha512-Mf64nZvoDRwRCMdCjNpxCptWzpF0Vb5pcgZEoZhofI1Yi1UhnXSnxqpMHsKovl9LfCm375AjUbEgH3R3gGEBUw==}
     engines: {node: '>=18.0.0'}
 
   '@next/env@15.2.2':
@@ -2057,7 +2057,7 @@ snapshots:
     dependencies:
       sparse-bitfield: 3.0.3
 
-  '@netlify/plugin-nextjs@5.15.9': {}
+  '@netlify/plugin-nextjs@5.15.10': {}
 
   '@next/env@15.2.2': {}
 
