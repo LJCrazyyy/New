@@ -110,6 +110,35 @@ async function autoAssignSubjects(studentId: string, semester: string) {
   } catch {}
 }
 
+function getStatusColor(status: EnrollmentRecord['status']) {
+  switch (status) {
+    case 'enrolled':
+      return 'bg-green-900/30 text-green-200 hover:bg-green-900/50'
+    case 'completed':
+      return 'bg-blue-900/30 text-blue-200 hover:bg-blue-900/50'
+    case 'pending':
+      return 'bg-amber-900/30 text-amber-200 hover:bg-amber-900/50'
+    case 'dropped':
+      return 'bg-red-900/30 text-red-200 hover:bg-red-900/50'
+    default:
+      return 'bg-gray-700/30 text-gray-200 hover:bg-gray-700/50'
+  }
+}
+
+function getStatusIcon(status: EnrollmentRecord['status']) {
+  switch (status) {
+    case 'enrolled':
+    case 'completed':
+      return <CheckCircle className="h-4 w-4" />
+    case 'pending':
+      return <Clock className="h-4 w-4" />
+    case 'dropped':
+      return <XCircle className="h-4 w-4" />
+    default:
+      return null
+  }
+}
+
 export function EnrollmentManagement() {
   const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([])
   const [students, setStudents] = useState<StudentOption[]>([])
@@ -277,6 +306,32 @@ export function EnrollmentManagement() {
       await loadData()
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : 'Failed to update enrollment.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const onUpdateStatus = async (id: string, status: EnrollmentRecord['status']) => {
+    setError('')
+    setIsSaving(true)
+
+    try {
+      const response = await fetch(`/api/enrollments/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Failed to update enrollment status.')
+      }
+
+      await loadData()
+      await createEnrollmentNotification(payload?.data?.student?.id, payload?.data?.course?.code, status)
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Failed to update enrollment status.')
     } finally {
       setIsSaving(false)
     }
@@ -457,7 +512,7 @@ export function EnrollmentManagement() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-white">
             <tbody>
-              {paginatedEnrollments.map((enroll) => (
+              {paginated.map((enroll) => (
                 <tr key={enroll.id} className="border-b border-gray-800 hover:bg-gray-800/50">
                   <td className="py-3 px-4 text-white font-medium">
                     {enroll.student?.name ?? 'Unknown'}
