@@ -1422,7 +1422,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
         updateOne: {
           filter: {
             student: student._id,
-            type: 'enrollment',
+            type: 'enrollment' as const,
             description: `Fall 2026 enrollment processed`,
           },
           update: {
@@ -1442,7 +1442,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
         updateOne: {
           filter: {
             student: student._id,
-            type: 'milestone',
+            type: 'milestone' as const,
             description: `Attendance baseline established`,
           },
           update: {

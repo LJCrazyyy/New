@@ -69,9 +69,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     const normalizedStudentId = studentId.trim()
     const normalizedStudentEmail = normalizedStudentId.toLowerCase()
     const userLookup = isValidObjectId(normalizedStudentId)
-      ? { _id: normalizedStudentId, role: 'student' }
+      ? { _id: normalizedStudentId, role: 'student' as const }
       : {
-          role: 'student',
+          role: 'student' as const,
           $or: [{ systemId: normalizedStudentId }, { email: normalizedStudentEmail }],
         }
 

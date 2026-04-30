@@ -6,14 +6,14 @@ import { normalizeError, serializeRecord, applyPopulate, buildPagination, buildQ
 export const runtime = 'nodejs'
 
 const MAX_UNITS_PER_SEMESTER = 21
-const ACTIVE_ENROLLMENT_STATUSES = new Set(['enrolled', 'pending'])
+const ACTIVE_ENROLLMENT_STATUSES = ['enrolled', 'pending'] as const
 const MAX_STUDENTS_PER_TEACHER_SUBJECT = 50
 
 async function syncCourseEnrolledCount(courseId: string, semester: string) {
   const activeEnrollmentCount = await Enrollment.countDocuments({
     course: courseId,
     semester,
-    status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+    status: { $in: ACTIVE_ENROLLMENT_STATUSES },
   })
 
   const normalizedEnrolledCount = Math.min(activeEnrollmentCount, 50)
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
       const teacherSubjectActiveCount = await Enrollment.countDocuments({
         course: { $in: teacherSubjectCourseIds.map((entry) => entry._id) },
         semester: body.semester,
-        status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+        status: { $in: ACTIVE_ENROLLMENT_STATUSES },
       })
 
       if (teacherSubjectActiveCount >= MAX_STUDENTS_PER_TEACHER_SUBJECT) {
@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
       status: body.status || 'pending',
     })
 
-    if (ACTIVE_ENROLLMENT_STATUSES.has(body.status || 'pending')) {
+    if (ACTIVE_ENROLLMENT_STATUSES.includes((body.status || 'pending') as (typeof ACTIVE_ENROLLMENT_STATUSES)[number])) {
       await syncCourseEnrolledCount(String(body.course), body.semester)
     }
 
