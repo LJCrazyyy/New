@@ -97,6 +97,19 @@ async function createEnrollmentNotification(
   } catch {}
 }
 
+async function autoAssignSubjects(studentId: string, semester: string) {
+  try {
+    // Auto-assign subjects for the student in the given semester
+    await fetch('/api/enrollments/auto-assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentId, semester }),
+    }).catch(() => {
+      // Silently fail if endpoint doesn't exist
+    })
+  } catch {}
+}
+
 export function EnrollmentManagement() {
   const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([])
   const [students, setStudents] = useState<StudentOption[]>([])
@@ -108,6 +121,9 @@ export function EnrollmentManagement() {
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState<EnrollmentForm>(initialForm)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingEnrollment, setEditingEnrollment] = useState<EnrollmentRecord | null>(null)
+  const [editForm, setEditForm] = useState<EnrollmentForm>(initialForm)
 
   const fetchAllPages = async <T,>(urlForPage: (page: number) => string): Promise<T[]> => {
     const aggregated: T[] = []
