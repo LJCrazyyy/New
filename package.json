@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "pnpm exec next build",
+    "postbuild": "node scripts/sync-netlify-publish.mjs",
     "start": "next start",
     "lint": "eslint ."
   },
