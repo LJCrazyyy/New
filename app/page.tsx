@@ -13,10 +13,18 @@ type AppState = 'role-select' | 'login' | 'dashboard'
 type UserRole = 'student' | 'faculty' | 'admin'
 const SESSION_STORAGE_KEY = 'campus.currentUser'
 
+// Demo data for bypassing login
+const DEMO_USER: UserData = {
+  id: 'ADM001',
+  name: 'Admin User',
+  email: 'admin@school.com',
+  role: 'admin',
+}
+
 export default function Page() {
-  const [appState, setAppState] = useState<AppState>('role-select')
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null)
-  const [currentUser, setCurrentUser] = useState<UserData | null>(null)
+  const [appState, setAppState] = useState<AppState>('dashboard')
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>('admin')
+  const [currentUser, setCurrentUser] = useState<UserData | null>(DEMO_USER)
 
   useEffect(() => {
     let isMounted = true

@@ -22,13 +22,13 @@ const protectedSystemSettingsKeys = new Set([
   'academicYear',
 ])
 
-const ACTIVE_ENROLLMENT_STATUSES = new Set(['enrolled', 'pending'])
+const ACTIVE_ENROLLMENT_STATUSES = ['enrolled', 'pending'] as const
 
 async function syncCourseEnrolledCount(courseId: string, semester: string) {
   const activeEnrollmentCount = await Enrollment.countDocuments({
     course: courseId,
     semester,
-    status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+    status: { $in: ACTIVE_ENROLLMENT_STATUSES },
   })
 
   const normalizedEnrolledCount = Math.min(activeEnrollmentCount, 50)
@@ -52,7 +52,7 @@ async function syncAllCourseConstraints() {
   const activeCounts = await Enrollment.aggregate([
     {
       $match: {
-        status: { $in: Array.from(ACTIVE_ENROLLMENT_STATUSES) },
+        status: { $in: ACTIVE_ENROLLMENT_STATUSES },
       },
     },
     {
@@ -258,22 +258,22 @@ export async function POST(request: NextRequest, context: RouteContext) {
             const defaultCourses = await Course.find({ semester }).limit(4).select('_id')
 
             if (defaultCourses.length > 0) {
-              const ops = defaultCourses.map((c) => ({
-                updateOne: {
-                  filter: { student: profile.user, course: c._id, semester },
-                  update: {
-                    $set: {
-                      student: profile.user,
-                      course: c._id,
-                      semester,
-                      status: 'enrolled',
+              await Promise.all(
+                defaultCourses.map((c) =>
+                  Enrollment.updateOne(
+                    { student: profile.user, course: c._id, semester },
+                    {
+                      $set: {
+                        student: profile.user,
+                        course: c._id,
+                        semester,
+                        status: 'enrolled',
+                      },
                     },
-                  },
-                  upsert: true,
-                },
-              }))
-
-              await Enrollment.bulkWrite(ops, { ordered: false })
+                    { upsert: true }
+                  )
+                )
+              )
 
               // Sync enrolled counts for affected courses
               await Promise.all(
@@ -387,12 +387,12 @@ async function updateRecord(request: NextRequest, context: RouteContext) {
       const nextStatus = String((updatedRecord as any).status)
 
       const shouldSyncPrevious =
-        ACTIVE_ENROLLMENT_STATUSES.has(previousStatus) &&
-        (!ACTIVE_ENROLLMENT_STATUSES.has(nextStatus) || previousCourseId !== nextCourseId || previousSemester !== nextSemester)
+        ACTIVE_ENROLLMENT_STATUSES.includes(previousStatus as (typeof ACTIVE_ENROLLMENT_STATUSES)[number]) &&
+        (!ACTIVE_ENROLLMENT_STATUSES.includes(nextStatus as (typeof ACTIVE_ENROLLMENT_STATUSES)[number]) || previousCourseId !== nextCourseId || previousSemester !== nextSemester)
 
       const shouldSyncNext =
-        ACTIVE_ENROLLMENT_STATUSES.has(nextStatus) &&
-        (!ACTIVE_ENROLLMENT_STATUSES.has(previousStatus) || previousCourseId !== nextCourseId || previousSemester !== nextSemester)
+        ACTIVE_ENROLLMENT_STATUSES.includes(nextStatus as (typeof ACTIVE_ENROLLMENT_STATUSES)[number]) &&
+        (!ACTIVE_ENROLLMENT_STATUSES.includes(previousStatus as (typeof ACTIVE_ENROLLMENT_STATUSES)[number]) || previousCourseId !== nextCourseId || previousSemester !== nextSemester)
 
       if (shouldSyncPrevious) {
         await syncCourseEnrolledCount(previousCourseId, previousSemester)
@@ -470,7 +470,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     if (
       resolved.collection === 'enrollments' &&
       previousEnrollment &&
-      ACTIVE_ENROLLMENT_STATUSES.has(String(previousEnrollment.status))
+      ACTIVE_ENROLLMENT_STATUSES.includes(String(previousEnrollment.status) as (typeof ACTIVE_ENROLLMENT_STATUSES)[number])
     ) {
       await syncCourseEnrolledCount(String(previousEnrollment.course), String(previousEnrollment.semester))
     }
