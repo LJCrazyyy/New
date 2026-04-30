@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { CheckCircle, Clock, Plus, XCircle } from 'lucide-react'
+import { CheckCircle, Clock, Edit, Plus, Save, X, XCircle } from 'lucide-react'
 
 type EnrollmentRecord = {
   id: string
@@ -49,6 +49,11 @@ type EnrollmentForm = {
   course: string
   semester: string
   status: 'enrolled' | 'completed' | 'dropped' | 'pending'
+  prelim: string
+  midterm: string
+  final: string
+  average: string
+  gradeLetter: string
 }
 
 const initialForm: EnrollmentForm = {
@@ -56,6 +61,11 @@ const initialForm: EnrollmentForm = {
   course: '',
   semester: 'Spring 2024',
   status: 'pending',
+  prelim: '',
+  midterm: '',
+  final: '',
+  average: '',
+  gradeLetter: '',
 }
 
 const API_PAGE_LIMIT = 100
@@ -101,6 +111,9 @@ export function EnrollmentManagement() {
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState<EnrollmentForm>(initialForm)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<EnrollmentForm>(initialForm)
+  const [editingEnrollment, setEditingEnrollment] = useState<EnrollmentRecord | null>(null)
 
   const fetchAllPages = async <T,>(urlForPage: (page: number) => string): Promise<T[]> => {
     const aggregated: T[] = []
@@ -207,9 +220,9 @@ export function EnrollmentManagement() {
     }
   }
 
-  const getStudentCurrentUnits = (studentId: string, semester: string): number => {
+  const getStudentCurrentUnits = (studentId: string, semester: string, excludeEnrollmentId?: string): number => {
     return enrollments
-      .filter((e) => e.student?.id === studentId && e.semester === semester && ['enrolled', 'pending'].includes(e.status))
+      .filter((e) => e.id !== excludeEnrollmentId && e.student?.id === studentId && e.semester === semester && ['enrolled', 'pending'].includes(e.status))
       .reduce((sum, e) => {
         const courseData = courses.find((c) => c.id === e.course?.id)
         return sum + (courseData?.units ?? 0)
@@ -241,6 +254,80 @@ export function EnrollmentManagement() {
     return { canEnroll: true }
   }
 
+  const onStartEdit = (enrollment: EnrollmentRecord) => {
+    setEditingId(enrollment.id)
+    setEditingEnrollment(enrollment)
+    setEditForm({
+      student: enrollment.student?.id ?? '',
+      course: enrollment.course?.id ?? '',
+      semester: enrollment.semester ?? '',
+      status: enrollment.status,
+      prelim: typeof enrollment.prelim === 'number' ? String(enrollment.prelim) : '',
+      midterm: typeof enrollment.midterm === 'number' ? String(enrollment.midterm) : '',
+      final: typeof enrollment.final === 'number' ? String(enrollment.final) : '',
+      average: typeof enrollment.average === 'number' ? String(enrollment.average) : '',
+      gradeLetter: enrollment.gradeLetter ?? '',
+    })
+  }
+
+  const onCancelEdit = () => {
+    setEditingId(null)
+    setEditingEnrollment(null)
+    setEditForm(initialForm)
+  }
+
+  const onSaveEdit = async () => {
+    if (!editingId) {
+      return
+    }
+
+    if (!editForm.student || !editForm.course || !editForm.semester) {
+      setError('Please select student, course, and semester.')
+      return
+    }
+
+    const editCurrentUnits = getStudentCurrentUnits(editForm.student, editForm.semester, editingId ?? undefined)
+    const selectedCourseUnits = courses.find((course) => course.id === editForm.course)?.units ?? 0
+    if (editCurrentUnits + selectedCourseUnits > 21) {
+      setError(`Cannot save: student would have ${editCurrentUnits + selectedCourseUnits} units (limit is 21).`)
+      return
+    }
+
+    setError('')
+    setIsSaving(true)
+
+    try {
+      const response = await fetch(`/api/enrollments/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student: editForm.student,
+          course: editForm.course,
+          semester: editForm.semester,
+          status: editForm.status,
+          prelim: editForm.prelim.trim() ? Number(editForm.prelim) : null,
+          midterm: editForm.midterm.trim() ? Number(editForm.midterm) : null,
+          final: editForm.final.trim() ? Number(editForm.final) : null,
+          average: editForm.average.trim() ? Number(editForm.average) : null,
+          gradeLetter: editForm.gradeLetter.trim() || null,
+        }),
+      })
+
+      const payload = await response.json()
+
+      if (!response.ok || !payload.success) {
+        throw new Error(payload.message || 'Failed to update enrollment.')
+      }
+
+      onCancelEdit()
+      await loadData()
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Failed to update enrollment.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   const onCreateEnrollment = async (event: React.FormEvent) => {
     event.preventDefault()
     setError('')
@@ -267,6 +354,11 @@ export function EnrollmentManagement() {
           course: form.course,
           semester: form.semester,
           status: form.status,
+          prelim: form.prelim.trim() ? Number(form.prelim) : null,
+          midterm: form.midterm.trim() ? Number(form.midterm) : null,
+          final: form.final.trim() ? Number(form.final) : null,
+          average: form.average.trim() ? Number(form.average) : null,
+          gradeLetter: form.gradeLetter.trim() || null,
         }),
       })
 
@@ -346,6 +438,11 @@ export function EnrollmentManagement() {
                 <option value="completed">Completed</option>
                 <option value="dropped">Dropped</option>
               </select>
+              <Input value={form.prelim} onChange={(e) => setForm((p) => ({ ...p, prelim: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Prelim" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={form.midterm} onChange={(e) => setForm((p) => ({ ...p, midterm: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Midterm" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={form.final} onChange={(e) => setForm((p) => ({ ...p, final: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Final" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={form.average} onChange={(e) => setForm((p) => ({ ...p, average: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Average" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={form.gradeLetter} onChange={(e) => setForm((p) => ({ ...p, gradeLetter: e.target.value }))} placeholder="Grade Letter" className="bg-gray-800 border-gray-700 text-white" />
             </div>
 
             {/* Unit Information Display */}
@@ -370,6 +467,50 @@ export function EnrollmentManagement() {
               <Button type="submit" disabled={isSaving || !canEnroll().canEnroll} className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">{isSaving ? 'Saving...' : 'Create Enrollment'}</Button>
             </div>
           </form>
+        )}
+
+        {editingId && (
+          <div className="rounded-lg border border-gray-700 bg-gray-800/40 p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold text-white">Edit Enrollment</p>
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={onSaveEdit} disabled={isSaving}>
+                  <Save className="h-4 w-4 mr-2" />
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button type="button" size="sm" variant="outline" className="border-gray-700 text-gray-200 hover:bg-gray-700" onClick={onCancelEdit}>
+                  <X className="h-4 w-4 mr-2" />
+                  Cancel
+                </Button>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-4">
+              <select value={editForm.student} onChange={(e) => setEditForm((p) => ({ ...p, student: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                <option value="">Select Student</option>
+                {students.map((student) => (
+                  <option key={student.id} value={student.id}>{student.name} ({student.systemId})</option>
+                ))}
+              </select>
+              <select value={editForm.course} onChange={(e) => setEditForm((p) => ({ ...p, course: e.target.value }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                <option value="">Select Course</option>
+                {courses.map((course) => (
+                  <option key={course.id} value={course.id}>{course.code} - {course.name} ({course.section}) - {course.units || 0} units</option>
+                ))}
+              </select>
+              <Input value={editForm.semester} onChange={(e) => setEditForm((p) => ({ ...p, semester: e.target.value }))} placeholder="Semester" className="bg-gray-800 border-gray-700 text-white" />
+              <select value={editForm.status} onChange={(e) => setEditForm((p) => ({ ...p, status: e.target.value as EnrollmentForm['status'] }))} className="h-10 rounded-md border border-gray-700 bg-gray-800 px-3 text-sm text-white">
+                <option value="pending">Pending</option>
+                <option value="enrolled">Enrolled</option>
+                <option value="completed">Completed</option>
+                <option value="dropped">Dropped</option>
+              </select>
+              <Input value={editForm.prelim} onChange={(e) => setEditForm((p) => ({ ...p, prelim: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Prelim" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={editForm.midterm} onChange={(e) => setEditForm((p) => ({ ...p, midterm: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Midterm" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={editForm.final} onChange={(e) => setEditForm((p) => ({ ...p, final: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Final" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={editForm.average} onChange={(e) => setEditForm((p) => ({ ...p, average: e.target.value }))} type="number" step="0.1" min="0" max="100" placeholder="Average" className="bg-gray-800 border-gray-700 text-white" />
+              <Input value={editForm.gradeLetter} onChange={(e) => setEditForm((p) => ({ ...p, gradeLetter: e.target.value }))} placeholder="Grade Letter" className="bg-gray-800 border-gray-700 text-white" />
+            </div>
+          </div>
         )}
 
         <div className="relative">
@@ -426,12 +567,17 @@ export function EnrollmentManagement() {
                   </td>
                   <td className="py-3 px-4 text-center text-gray-400 text-xs">{enroll.semester}</td>
                   <td className="py-3 px-4 text-center">
-                    {enroll.status === 'pending' && (
-                      <div className="space-x-1">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onUpdateStatus(enroll.id, 'enrolled')}>Approve</Button>
-                        <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:text-red-300" onClick={() => onUpdateStatus(enroll.id, 'dropped')}>Reject</Button>
-                      </div>
-                    )}
+                    <div className="space-x-1">
+                      <Button size="sm" variant="ghost" className="text-gray-400 hover:text-white" onClick={() => onStartEdit(enroll)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      {enroll.status === 'pending' && (
+                        <>
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white" onClick={() => onUpdateStatus(enroll.id, 'enrolled')}>Approve</Button>
+                          <Button size="sm" variant="outline" className="border-red-600 text-red-400 hover:text-red-300" onClick={() => onUpdateStatus(enroll.id, 'dropped')}>Reject</Button>
+                        </>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
