@@ -99,7 +99,7 @@ export function AdminDashboard({ onLogout, currentUser }: AdminDashboardProps) {
           {activeSection === 'enrollment' && <EnrollmentManagement />}
           {activeSection === 'documents' && <StudentDocumentManagement />}
           {activeSection === 'organizations' && <StudentOrganizationManagement />}
-          {activeSection === 'academic-history' && <AcademicHistoryManagement />}
+          {/* {activeSection === 'academic-history' && <AcademicHistoryManagement />} */}
           {activeSection === 'arade-scales' && <GradeScaleManagement />}
           {activeSection === 'course-prerequisites' && <CoursePrerequisiteManagement />}
           {activeSection === 'medical-records' && <MedicalRecordManagement />}

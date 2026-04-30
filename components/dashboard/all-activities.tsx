@@ -69,7 +69,7 @@ export function AllActivities({ courses, studentId }: AllActivitiesProps) {
         const enrollRes = await fetch(`/api/enrollments?student=${encodeURIComponent(studentId)}&limit=500`)
         const enrollJson = await enrollRes.json()
         if (enrollRes.ok && enrollJson.success && Array.isArray(enrollJson.data)) {
-          const uniqueCourses = new Map<string, { id: string; code?: string; name?: string }>()
+          const uniqueCourses = new Map<string, { id: string; code: string; name: string }>()
           for (const e of enrollJson.data) {
             const c = e.course
             if (c && c._id) uniqueCourses.set(String(c._id), { id: String(c._id), code: c.code ?? '', name: c.name ?? '' })
