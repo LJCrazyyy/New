@@ -1,11 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/database'
-import {
-  AdminProfile,
-  FacultyProfile,
-  StudentProfile,
-  User,
-} from '@/lib/system-models'
+import { getFirestoreDb } from '@/lib/firebase'
 import { normalizeError, serializeRecord } from '@/lib/api-resources'
 
 export const runtime = 'nodejs'
@@ -75,17 +69,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await connectToDatabase()
+    const db = getFirestoreDb()
+    const userQuery = db.collection('users').where('email', '==', email)
 
-    const query: Record<string, unknown> = { email }
+    const userSnapshot = role ? await userQuery.where('role', '==', role).limit(1).get() : await userQuery.limit(1).get()
+    const userDoc = userSnapshot.docs[0]
 
-    if (role) {
-      query.role = role
+    if (!userDoc) {
+      return apiError('Invalid email or password.', 401)
     }
 
-    const user = await User.findOne(query)
+    const user = { id: userDoc.id, _id: userDoc.id, ...userDoc.data() }
 
-    if (!user || !isValidPassword(password, user.passwordHash, user.role)) {
+    if (!isValidPassword(password, user.passwordHash, user.role)) {
       return apiError('Invalid email or password.', 401)
     }
 
@@ -94,15 +90,18 @@ export async function POST(request: NextRequest) {
     let profile: unknown = null
 
     if (user.role === 'student') {
-      profile = await StudentProfile.findOne({ user: user._id })
+      const profileSnapshot = await db.collection('studentprofiles').where('user', '==', user._id).limit(1).get()
+      profile = profileSnapshot.docs[0] ? { id: profileSnapshot.docs[0].id, _id: profileSnapshot.docs[0].id, ...profileSnapshot.docs[0].data() } : null
     }
 
     if (user.role === 'faculty') {
-      profile = await FacultyProfile.findOne({ user: user._id })
+      const profileSnapshot = await db.collection('facultyprofiles').where('user', '==', user._id).limit(1).get()
+      profile = profileSnapshot.docs[0] ? { id: profileSnapshot.docs[0].id, _id: profileSnapshot.docs[0].id, ...profileSnapshot.docs[0].data() } : null
     }
 
     if (user.role === 'admin') {
-      profile = await AdminProfile.findOne({ user: user._id })
+      const profileSnapshot = await db.collection('adminprofiles').where('user', '==', user._id).limit(1).get()
+      profile = profileSnapshot.docs[0] ? { id: profileSnapshot.docs[0].id, _id: profileSnapshot.docs[0].id, ...profileSnapshot.docs[0].data() } : null
     }
 
     return apiSuccess({
