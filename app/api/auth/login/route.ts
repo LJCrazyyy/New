@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { getFirestoreDb } from '@/lib/firebase'
 import {
   AdminProfile,
   FacultyProfile,
@@ -14,6 +14,30 @@ const demoPasswordAliases: Record<'student' | 'faculty' | 'admin', string[]> = {
   student: ['student123', 'demo-student-password'],
   faculty: ['faculty123', 'demo-faculty-password'],
   admin: ['admin123', 'demo-admin-password'],
+}
+
+const demoAccounts: Record<'student' | 'faculty' | 'admin', { id: string; systemId: string; name: string; email: string; passwordHash: string }> = {
+  student: {
+    id: 'STU001',
+    systemId: 'STU001',
+    name: 'John Smith',
+    email: 'student@school.com',
+    passwordHash: 'student123',
+  },
+  faculty: {
+    id: 'FACTEST001',
+    systemId: 'FACTEST001',
+    name: 'Test Faculty',
+    email: 'faculty.test@school.com',
+    passwordHash: 'faculty123',
+  },
+  admin: {
+    id: 'ADM001',
+    systemId: 'ADM001',
+    name: 'Admin User',
+    email: 'admin@school.com',
+    passwordHash: 'admin123',
+  },
 }
 
 function apiError(message: string, status: number, details?: Record<string, unknown>) {
@@ -41,6 +65,21 @@ function buildSafeUser(userRecord: any) {
   const serializedUser = serializeRecord(userRecord) as Record<string, unknown> & { passwordHash?: string }
   const { passwordHash: _passwordHash, ...safeUser } = serializedUser
   return safeUser
+}
+
+function buildDemoUser(role: 'student' | 'faculty' | 'admin') {
+  const account = demoAccounts[role]
+
+  return {
+    id: account.id,
+    _id: account.id,
+    systemId: account.systemId,
+    name: account.name,
+    email: account.email,
+    role,
+    status: 'active',
+    passwordHash: account.passwordHash,
+  }
 }
 
 function isValidPassword(inputPassword: string, storedPassword: string | undefined, userRole: unknown) {
@@ -75,17 +114,27 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await connectToDatabase()
-
-    const query: Record<string, unknown> = { email }
+    const db = getFirestoreDb()
+    let userQuery = db.collection('users').where('email', '==', email)
 
     if (role) {
-      query.role = role
+      userQuery = userQuery.where('role', '==', role)
     }
 
-    const user = await User.findOne(query)
+    const userSnapshot = await userQuery.limit(1).get()
+    const userDoc = userSnapshot.docs[0]
 
-    if (!user || !isValidPassword(password, user.passwordHash, user.role)) {
+    const user = userDoc
+      ? { id: userDoc.id, _id: userDoc.id, ...userDoc.data() }
+      : role && demoAccounts[role] && email === demoAccounts[role].email
+        ? buildDemoUser(role)
+        : null
+
+    if (!user) {
+      return apiError('Invalid email or password.', 401)
+    }
+
+    if (!isValidPassword(password, user.passwordHash, user.role)) {
       return apiError('Invalid email or password.', 401)
     }
 
@@ -94,15 +143,21 @@ export async function POST(request: NextRequest) {
     let profile: unknown = null
 
     if (user.role === 'student') {
-      profile = await StudentProfile.findOne({ user: user._id })
+      const profileSnapshot = await db.collection('studentprofiles').where('user', '==', user._id).limit(1).get()
+      const profileDoc = profileSnapshot.docs[0]
+      profile = profileDoc ? { id: profileDoc.id, _id: profileDoc.id, ...profileDoc.data() } : null
     }
 
     if (user.role === 'faculty') {
-      profile = await FacultyProfile.findOne({ user: user._id })
+      const profileSnapshot = await db.collection('facultyprofiles').where('user', '==', user._id).limit(1).get()
+      const profileDoc = profileSnapshot.docs[0]
+      profile = profileDoc ? { id: profileDoc.id, _id: profileDoc.id, ...profileDoc.data() } : null
     }
 
     if (user.role === 'admin') {
-      profile = await AdminProfile.findOne({ user: user._id })
+      const profileSnapshot = await db.collection('adminprofiles').where('user', '==', user._id).limit(1).get()
+      const profileDoc = profileSnapshot.docs[0]
+      profile = profileDoc ? { id: profileDoc.id, _id: profileDoc.id, ...profileDoc.data() } : null
     }
 
     return apiSuccess({

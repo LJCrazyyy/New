@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
-import { Notification } from '@/lib/system-models'
+import { getFirestoreDb } from '@/lib/firebase'
 import { normalizeError, serializeRecord } from '@/lib/api-resources'
 
 export const runtime = 'nodejs'
@@ -27,51 +26,55 @@ function apiSuccess(data: unknown, status = 200, meta?: Record<string, unknown>)
   )
 }
 
-function buildRecipientFilter(searchParams: URLSearchParams) {
-  const recipientId = searchParams.get('recipientId')?.trim()
-  const recipientRole = searchParams.get('recipientRole')?.trim().toLowerCase()
+async function fetchNotificationsPage(params: URLSearchParams) {
+  const db = getFirestoreDb()
+  const recipientId = params.get('recipientId')?.trim()
+  const recipientRole = params.get('recipientRole')?.trim().toLowerCase()
+  const limitValue = Number(params.get('limit') ?? '20')
+  const pageValue = Number(params.get('page') ?? '1')
+  const limit = Number.isFinite(limitValue) && limitValue > 0 ? Math.min(limitValue, 50) : 20
+  const page = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
+  const skip = (page - 1) * limit
 
-  const filters: Array<Record<string, unknown>> = []
+  let baseQuery = db.collection('notifications').orderBy('createdAt', 'desc')
 
   if (recipientId) {
-    filters.push({ recipientId })
+    baseQuery = baseQuery.where('recipientId', '==', recipientId)
+  } else if (recipientRole) {
+    baseQuery = baseQuery.where('recipientRole', '==', recipientRole)
+  } else {
+    baseQuery = baseQuery.where('recipientRole', 'in', ['student', 'faculty', 'admin'])
   }
 
-  if (recipientRole) {
-    filters.push({ recipientRole, recipientId: { $in: [null, ''] } })
-  }
+  const snapshot = await baseQuery.get()
+  const records = snapshot.docs.map((doc) => ({ id: doc.id, _id: doc.id, ...doc.data() }))
+  const filteredRecords = recipientId
+    ? records
+    : records.filter((record) => record.recipientId == null || record.recipientId === '')
 
-  if (filters.length === 0) {
-    filters.push({ recipientRole: { $in: ['student', 'faculty', 'admin'] }, recipientId: { $in: [null, ''] } })
-  }
+  const pagedRecords = filteredRecords.slice(skip, skip + limit)
+  const unreadCount = filteredRecords.filter((record) => !record.isRead).length
 
-  return { $or: filters }
+  return {
+    notifications: pagedRecords,
+    total: filteredRecords.length,
+    unreadCount,
+    page,
+    limit,
+  }
 }
 
 export async function GET(request: NextRequest) {
   try {
-    await connectToDatabase()
+    const result = await fetchNotificationsPage(request.nextUrl.searchParams)
 
-    const filter = buildRecipientFilter(request.nextUrl.searchParams)
-    const limitValue = Number(request.nextUrl.searchParams.get('limit') ?? '20')
-    const pageValue = Number(request.nextUrl.searchParams.get('page') ?? '1')
-    const limit = Number.isFinite(limitValue) && limitValue > 0 ? Math.min(limitValue, 50) : 20
-    const page = Number.isFinite(pageValue) && pageValue > 0 ? pageValue : 1
-    const skip = (page - 1) * limit
-
-    const [total, unreadCount, notifications] = await Promise.all([
-      Notification.countDocuments(filter),
-      Notification.countDocuments({ ...filter, isRead: false }),
-      Notification.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit),
-    ])
-
-    return apiSuccess(serializeRecord(notifications), 200, {
-      unreadCount,
+    return apiSuccess(serializeRecord(result.notifications), 200, {
+      unreadCount: result.unreadCount,
       pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.max(1, Math.ceil(total / limit)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        pages: Math.max(1, Math.ceil(result.total / result.limit)),
       },
     })
   } catch (error) {
@@ -95,9 +98,9 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    await connectToDatabase()
-
-    const notification = await Notification.create({
+    const db = getFirestoreDb()
+    const now = new Date()
+    const payload = {
       recipientId: typeof body.recipientId === 'string' ? body.recipientId.trim() : '',
       recipientRole,
       title,
@@ -105,11 +108,14 @@ export async function POST(request: NextRequest) {
       type: typeof body.type === 'string' ? body.type.trim().toLowerCase() : 'system',
       link: typeof body.link === 'string' ? body.link.trim() : '',
       isRead: Boolean(body.isRead),
-      readAt: body.readAt ? new Date(body.readAt) : undefined,
-      createdBy: typeof body.createdBy === 'string' ? body.createdBy : undefined,
-    })
+      readAt: body.readAt ? new Date(body.readAt) : null,
+      createdBy: typeof body.createdBy === 'string' ? body.createdBy : '',
+      createdAt: now,
+      updatedAt: now,
+    }
 
-    return apiSuccess(serializeRecord(notification), 201)
+    const docRef = await db.collection('notifications').add(payload)
+    return apiSuccess(serializeRecord({ id: docRef.id, _id: docRef.id, ...payload }), 201)
   } catch (error) {
     return apiError(normalizeError(error), 500)
   }
@@ -130,31 +136,38 @@ export async function PATCH(request: NextRequest) {
   }
 
   try {
-    await connectToDatabase()
-
-    const filter: Record<string, unknown> = {}
-
-    if (recipientId) {
-      filter.$or = [...(filter.$or as Array<Record<string, unknown>> | undefined ?? []), { recipientId }]
-    }
-
-    if (recipientRole) {
-      filter.$or = [...(filter.$or as Array<Record<string, unknown>> | undefined ?? []), { recipientRole, recipientId: { $in: [null, ''] } }]
-    }
-
-    const update: Record<string, unknown> = {}
-
-    if (body.markAllRead === true) {
-      update.$set = { isRead: true, readAt: new Date() }
-    }
-
-    if (Object.keys(update).length === 0) {
+    if (body.markAllRead !== true) {
       return apiError('No notification update requested.', 400)
     }
 
-    const result = await Notification.updateMany(filter, update)
+    const db = getFirestoreDb()
+    const collection = db.collection('notifications')
+    const batch = db.batch()
+    const now = new Date()
 
-    return apiSuccess({ matchedCount: result.matchedCount, modifiedCount: result.modifiedCount })
+    const snapshot = recipientId
+      ? await collection.where('recipientId', '==', recipientId).get()
+      : recipientRole
+        ? await collection.where('recipientRole', '==', recipientRole).get()
+        : await collection.where('recipientRole', 'in', ['student', 'faculty', 'admin']).get()
+
+    let matchedCount = 0
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as Record<string, unknown>
+      if (recipientId || data.recipientId == null || data.recipientId === '') {
+        batch.update(doc.ref, { isRead: true, readAt: now, updatedAt: now })
+        matchedCount += 1
+      }
+    }
+
+    if (matchedCount === 0) {
+      return apiSuccess({ matchedCount: 0, modifiedCount: 0 })
+    }
+
+    await batch.commit()
+
+    return apiSuccess({ matchedCount, modifiedCount: matchedCount })
   } catch (error) {
     return apiError(normalizeError(error), 500)
   }

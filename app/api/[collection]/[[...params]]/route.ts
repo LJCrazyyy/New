@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import {
   applyPopulate,
   buildPagination,

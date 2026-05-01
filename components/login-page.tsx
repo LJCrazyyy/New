@@ -68,38 +68,15 @@ export function LoginPage({ role, onLoginSuccess, onBack }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false)
 
   const loadRoleAccount = async (targetRole: LoginPageProps['role'], page = 1) => {
-    try {
-      const response = await fetch(`/api/users?role=${targetRole}&limit=1&page=${page}&sort=name&order=asc`)
-      const payload = await response.json()
-
-      if (!response.ok || !payload.success) {
-        throw new Error(payload.message || 'Failed to load demo account.')
-      }
-
-      const account = Array.isArray(payload.data) ? payload.data[0] : null
-      const pagesFromMeta = Number(payload?.meta?.pagination?.pages)
-
-      if (targetRole === 'student') {
-        setStudentPages(Number.isFinite(pagesFromMeta) && pagesFromMeta > 0 ? pagesFromMeta : 1)
-      } else {
-        setStudentPages(1)
-      }
-
-      if (account?.email) {
-        setEmail(account.email)
-        setPassword(defaultPasswords[targetRole])
-        return
-      }
-
-      setEmail(demoUsers[targetRole].email)
-      setPassword(defaultPasswords[targetRole])
-    } catch {
-      if (targetRole !== 'student') {
-        setStudentPages(1)
-      }
-      setEmail(demoUsers[targetRole].email)
-      setPassword(defaultPasswords[targetRole])
+    if (targetRole === 'student') {
+      setStudentPages(1)
+      setStudentPage(page)
+    } else {
+      setStudentPages(1)
     }
+
+    setEmail(demoUsers[targetRole].email)
+    setPassword(demoUsers[targetRole].password)
   }
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import { Notification } from '@/lib/system-models'
 import { isValidObjectId, normalizeError, serializeRecord } from '@/lib/api-resources'
 

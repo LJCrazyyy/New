@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import { Enrollment, Course, CoursePrerequisite, SystemSetting } from '@/lib/system-models'
 import { normalizeError, serializeRecord, applyPopulate, buildPagination, buildQueryFilter, buildSortClause } from '@/lib/api-resources'
 

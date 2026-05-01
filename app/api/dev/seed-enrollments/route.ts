@@ -1,4 +1,4 @@
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import { User, Course, Enrollment } from '@/lib/system-models'
 
 export const runtime = 'nodejs'

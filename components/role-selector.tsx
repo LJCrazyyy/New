@@ -1,8 +1,6 @@
 'use client'
 
-import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { BookOpen, Users, Shield } from 'lucide-react'
 
 interface RoleSelectorProps {
@@ -10,8 +8,6 @@ interface RoleSelectorProps {
 }
 
 export function RoleSelector({ onSelectRole }: RoleSelectorProps) {
-  const [selectedRole, setSelectedRole] = useState<'student' | 'faculty' | 'admin' | null>(null)
-
   const roles = [
     {
       id: 'student',
@@ -47,43 +43,35 @@ export function RoleSelector({ onSelectRole }: RoleSelectorProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {roles.map((role) => {
             const Icon = role.icon
-            const isSelected = selectedRole === role.id
 
             return (
-              <Card
+              <button
                 key={role.id}
-                className={`cursor-pointer transition-all border-2 ${
-                  isSelected
-                    ? `${role.color} shadow-lg scale-105`
-                    : 'bg-gray-900 border-gray-800 hover:border-gray-700'
-                }`}
-                onClick={() => setSelectedRole(role.id as 'student' | 'faculty' | 'admin')}
+                type="button"
+                className="text-left"
+                onClick={() => onSelectRole(role.id as 'student' | 'faculty' | 'admin')}
               >
-                <CardHeader>
-                  <div className="flex items-center justify-center mb-4">
-                    <div className={`p-3 rounded-lg ${role.color}`}>
-                      <Icon className="h-8 w-8 text-white" />
+                <Card className={`h-full border-2 transition-all bg-gray-900 border-gray-800 hover:border-gray-700 hover:-translate-y-1 ${role.color}`}>
+                  <CardHeader>
+                    <div className="flex items-center justify-center mb-4">
+                      <div className={`p-3 rounded-lg ${role.color}`}>
+                        <Icon className="h-8 w-8 text-white" />
+                      </div>
                     </div>
-                  </div>
-                  <CardTitle className="text-center text-white">{role.name}</CardTitle>
-                  <CardDescription className="text-center text-gray-400">
-                    {role.description}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+                    <CardTitle className="text-center text-white">{role.name}</CardTitle>
+                    <CardDescription className="text-center text-gray-400">
+                      {role.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="w-full rounded-md border border-white/10 bg-white/10 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-white/20">
+                      Continue as {role.name}
+                    </div>
+                  </CardContent>
+                </Card>
+                </button>
             )
           })}
-        </div>
-
-        <div className="mt-8 flex justify-center">
-          <Button
-            onClick={() => selectedRole && onSelectRole(selectedRole)}
-            disabled={!selectedRole}
-            size="lg"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-          >
-            Continue as {selectedRole ? roles.find(r => r.id === selectedRole)?.name : 'Role'}
-          </Button>
         </div>
       </div>
     </div>
