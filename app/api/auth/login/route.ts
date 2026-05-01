@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import {
   AdminProfile,
   FacultyProfile,
@@ -110,6 +110,14 @@ export async function POST(request: NextRequest) {
       profile: profile ? serializeRecord(profile) : null,
     })
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    const normalized = normalizeError(error)
+
+    if (typeof normalized === 'string' && normalized.includes('RESOURCE_EXHAUSTED')) {
+      return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+        raw: normalized,
+      })
+    }
+
+    return apiError(normalized, 500)
   }
 }

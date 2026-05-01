@@ -1,4 +1,4 @@
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import {
   AcademicHistory,
   AdminProfile,
@@ -137,7 +137,10 @@ function buildFacultyRoster(total = 200) {
 
 async function ensureFacultyRoster(total = 200) {
   const roster = buildFacultyRoster(total)
-  const existingFacultyUsers = await User.find({ role: 'faculty' }).sort({ systemId: 1 }).select('_id systemId email').lean()
+  const existingFacultyUsers = (await User.find({ role: 'faculty' }).sort({ systemId: 1 }).select('_id systemId email').lean()) as Array<{
+    systemId: string
+    email: string
+  }>
   const existingSystemIds = new Set(existingFacultyUsers.map((faculty) => faculty.systemId))
   const existingEmails = new Set(existingFacultyUsers.map((faculty) => faculty.email))
 
@@ -147,9 +150,18 @@ async function ensureFacultyRoster(total = 200) {
     await User.insertMany(usersToCreate, { ordered: true })
   }
 
-  const facultyUsers = await User.find({ role: 'faculty' }).sort({ systemId: 1 }).select('_id systemId name email role status').lean()
+  const facultyUsers = (await User.find({ role: 'faculty' }).sort({ systemId: 1 }).select('_id systemId name email role status').lean()) as Array<{
+    _id: string
+    systemId: string
+    name: string
+    email: string
+    role: string
+    status: string
+  }>
   const facultyIds = facultyUsers.map((faculty) => faculty._id)
-  const existingProfiles = await FacultyProfile.find({ user: { $in: facultyIds } }).select('user').lean()
+  const existingProfiles = (await FacultyProfile.find({ user: { $in: facultyIds } }).select('user').lean()) as Array<{
+    user: string
+  }>
   const profiledFacultyIds = new Set(existingProfiles.map((profile) => String(profile.user)))
 
   const profilesToInsert = facultyUsers
@@ -242,7 +254,7 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
   await ensureRoleNotifications()
 
   const facultyUsers = await ensureFacultyRoster(200)
-  const testFacultyUser = await User.create({
+  const testFacultyUser = (await User.create({
     systemId: 'FACTEST001',
     name: 'Test Faculty',
     email: 'faculty.test@school.com',
@@ -250,7 +262,7 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
     role: 'faculty',
     status: 'active',
     joinedAt: new Date('2023-01-01T00:00:00.000Z'),
-  })
+  })) as { _id: string }
 
   await FacultyProfile.create({
     user: testFacultyUser._id,
@@ -674,7 +686,7 @@ export async function seedSystemDatabase(): Promise<SeedResult> {
       action: 'seeded_database',
       entity: 'system',
       entityId: 'bootstrap',
-      details: 'Initial MongoDB system data seeded for the campus system.',
+      details: 'Initial Firebase system data seeded for the campus system.',
       occurredAt: new Date('2024-04-01T00:00:00.000Z'),
     },
   ])
@@ -835,7 +847,7 @@ async function ensureFacultyForBulkCourses() {
     return facultyUsers[0]
   }
 
-  const fallbackFaculty = await User.create({
+  const fallbackFaculty = (await User.create({
     systemId: 'FAC-BULK-001',
     name: 'Dr. Bulk Faculty',
     email: 'bulk.faculty@school.com',
@@ -843,7 +855,7 @@ async function ensureFacultyForBulkCourses() {
     role: 'faculty',
     status: 'active',
     joinedAt: new Date(),
-  })
+  })) as { _id: string }
 
   await FacultyProfile.create({
     user: fallbackFaculty._id,
@@ -861,7 +873,11 @@ async function ensureBulkCoursesAndEnrollStudents(defaultSemester: string) {
   const facultyUsers = await ensureFacultyRoster(200)
   const facultyPool = facultyUsers.length > 0 ? facultyUsers : [await ensureFacultyForBulkCourses()]
 
-  const existingCourses = await Course.find({ semester: defaultSemester }).select('_id code section semester')
+  const existingCourses = (await Course.find({ semester: defaultSemester }).select('_id code section semester')) as Array<{
+    code: string
+    section: string
+    semester: string
+  }>
   const existingCourseKeys = new Set(existingCourses.map((course) => `${course.code}|${course.section}|${course.semester}`))
 
   const createdCourseDocs: Array<{ _id: unknown }> = []
@@ -872,21 +888,26 @@ async function ensureBulkCoursesAndEnrollStudents(defaultSemester: string) {
     const assignedFaculty = facultyPool[coursesNewlyCreated % facultyPool.length]
 
     if (!existingCourseKeys.has(courseKey)) {
-      const createdCourse = await Course.create({
+      const createdCourse = (await Course.create({
         ...courseInput,
         faculty: assignedFaculty._id,
         enrolledCount: 0,
-      })
+      })) as { _id: string }
       createdCourseDocs.push({ _id: createdCourse._id })
       coursesNewlyCreated += 1
       existingCourseKeys.add(courseKey)
     }
   }
 
-  const allCourses = await Course.find({ semester: defaultSemester, code: { $in: bulkStudentCourseCatalog.map((course) => course.code) } }).select('_id code section semester')
+  const allCourses = (await Course.find({ semester: defaultSemester, code: { $in: bulkStudentCourseCatalog.map((course) => course.code) } }).select('_id code section semester')) as Array<{
+    _id: string
+    code: string
+    section: string
+    semester: string
+  }>
   const selectedCourses = allCourses.slice(0, 4)
 
-  const studentUsers = await User.find({ role: 'student' }).select('_id')
+  const studentUsers = (await User.find({ role: 'student' }).select('_id')) as Array<{ _id: string }>
 
   function clampGrade(value: number) {
     return Math.max(65, Math.min(99, Number(value.toFixed(1))))
@@ -960,12 +981,15 @@ async function ensureBulkCoursesAndEnrollStudents(defaultSemester: string) {
     totalStudents: studentUsers.length,
     coursesEnsured: allCourses.length,
     coursesNewlyCreated,
-    enrollmentsCreated: enrollmentWriteResult?.upsertedCount ?? 0,
+    enrollmentsCreated: enrollmentOperations.length,
   }
 }
 
 async function ensureBulkMedicalAndDisciplineRecords() {
-  const studentUsers = await User.find({ role: 'student' }).select('_id systemId').lean()
+  const studentUsers = (await User.find({ role: 'student' }).select('_id systemId').lean()) as Array<{
+    _id: string
+    systemId: string
+  }>
   const now = Date.now()
 
   const medicalTemplates = [
@@ -1107,10 +1131,13 @@ async function ensureGradeScalesAndPrerequisites(defaultSemester: string) {
     { courseCode: 'IT103', prerequisiteCode: 'CS101', minGrade: 'D' },
   ]
 
-  const prerequisiteCourses = await Course.find({
+  const prerequisiteCourses = (await Course.find({
     semester: defaultSemester,
     code: { $in: Array.from(new Set(prerequisitePairs.flatMap((item) => [item.courseCode, item.prerequisiteCode]))) },
-  }).select('_id code')
+  }).select('_id code')) as Array<{
+    _id: string
+    code: string
+  }>
 
   const courseByCode = new Map(prerequisiteCourses.map((course) => [course.code, course]))
   const prerequisiteOperations = prerequisitePairs
@@ -1170,12 +1197,20 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
 
   const counselorPool = facultyUsers.length > 0 ? facultyUsers : adminUser?._id ? [adminUser] : []
 
-  const enrollments = await Enrollment.find({
+  const enrollments = (await Enrollment.find({
     semester: defaultSemester,
-    student: { $in: studentUsers.map((student) => student._id) },
+    student: { $in: studentUsers.map((student: { _id: string }) => student._id) },
   })
     .select('_id student course semester status average gradeLetter')
-    .populate('course', 'code name')
+    .populate('course', 'code name')) as Array<{
+    _id: string
+    student: string
+    course: { _id?: string } | string
+    semester: string
+    status: string
+    average?: number | null
+    gradeLetter?: string | null
+  }>
 
   const enrollmentByStudent = new Map<string, any[]>()
   for (const enrollment of enrollments) {
@@ -1198,13 +1233,13 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
       updateOne: {
         filter: {
           student: enrollment.student,
-          course: enrollment.course?._id ?? enrollment.course,
+          course: typeof enrollment.course === 'string' ? enrollment.course : enrollment.course?._id ?? '',
           semester: enrollment.semester,
         },
         update: {
           $set: {
             student: enrollment.student,
-            course: enrollment.course?._id ?? enrollment.course,
+            course: typeof enrollment.course === 'string' ? enrollment.course : enrollment.course?._id ?? '',
             semester: enrollment.semester,
             totalSessions,
             sessionAttended,
@@ -1223,8 +1258,13 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
 
   const attendanceRecords = await Attendance.find({
     semester: defaultSemester,
-    student: { $in: studentUsers.map((student) => student._id) },
-  }).select('_id student totalSessions sessionAttended')
+    student: { $in: studentUsers.map((student: { _id: string }) => student._id) },
+  }).select('_id student totalSessions sessionAttended') as Array<{
+    _id: string
+    student: string
+    totalSessions?: number
+    sessionAttended?: number
+  }>
 
   const attendanceLogOperations = attendanceRecords.flatMap((record, index) => {
     const baseDate = now - ((index % 21) + 1) * 24 * 60 * 60 * 1000
@@ -1272,7 +1312,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
   }
 
   const counselingOperations = counselorPool.length > 0
-    ? studentUsers.map((student, index) => {
+    ? studentUsers.map((student: { _id: string }, index: number) => {
         const counselor = counselorPool[index % counselorPool.length]
 
         return {
@@ -1306,7 +1346,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
   }
 
   const counselingNotificationOperations = counselorPool.length > 0
-    ? studentUsers.map((student, index) => {
+    ? studentUsers.map((student: { _id: string; systemId?: string; name?: string }, index: number) => {
         const counselor = counselorPool[index % counselorPool.length]
 
         return {
@@ -1337,7 +1377,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
     await Notification.bulkWrite(counselingNotificationOperations, { ordered: false })
   }
 
-  const documentOperations = studentUsers.flatMap((student, index) => {
+  const documentOperations = studentUsers.flatMap((student: { _id: string; systemId?: string }, index: number) => {
     const suffix = String(student.systemId ?? '').toLowerCase()
 
     return [
@@ -1389,7 +1429,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
   const organizationNames = ['IT Society', 'Code Collective', 'Campus Peer Mentors', 'Robotics Guild']
   const organizationRoles = ['Member', 'Officer', 'Secretary', 'Treasurer']
 
-  const organizationOperations = studentUsers.map((student, index) => ({
+  const organizationOperations = studentUsers.map((student: { _id: string }, index: number) => ({
     updateOne: {
       filter: {
         student: student._id,
@@ -1412,7 +1452,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
     await StudentOrganization.bulkWrite(organizationOperations, { ordered: false })
   }
 
-  const historyOperations = studentUsers.flatMap((student, index) => {
+  const historyOperations = studentUsers.flatMap((student: { _id: string }, index: number) => {
     const studentEnrollments = enrollmentByStudent.get(String(student._id)) ?? []
     const topEnrollment = studentEnrollments[0]
     const counselor = counselorPool.length > 0 ? counselorPool[index % counselorPool.length] : undefined
@@ -1466,7 +1506,7 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
     await AcademicHistory.bulkWrite(historyOperations, { ordered: false })
   }
 
-  const notificationOperations = studentUsers.map((student) => ({
+  const notificationOperations = studentUsers.map((student: { _id: string }) => ({
     updateOne: {
       filter: {
         recipientRole: 'student' as const,
@@ -1502,7 +1542,10 @@ async function ensureBulkEnhancementRecords(defaultSemester: string) {
 }
 
 async function pruneStudentPopulation(targetTotal: number) {
-  const currentStudents = await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()
+  const currentStudents = (await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()) as Array<{
+    _id: string
+    systemId: string
+  }>
 
   if (targetTotal <= 0 || currentStudents.length <= targetTotal) {
     return { removed: 0 }
@@ -1512,7 +1555,9 @@ async function pruneStudentPopulation(targetTotal: number) {
   const overflowIds = overflowStudents.map((student) => student._id)
   const overflowIdStrings = overflowStudents.map((student) => String(student._id))
 
-  const attendanceRecords = await Attendance.find({ student: { $in: overflowIds } }).select('_id').lean()
+  const attendanceRecords = (await Attendance.find({ student: { $in: overflowIds } }).select('_id').lean()) as Array<{
+    _id: string
+  }>
   const attendanceIds = attendanceRecords.map((record) => record._id)
 
   await Promise.all([
@@ -1549,7 +1594,10 @@ export async function seedBulkStudents(options?: {
   const defaultPassword = options?.defaultPassword?.trim() || 'student123'
   const defaultSemester = 'Fall 2026'
 
-  let existingStudentUsers = await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()
+  let existingStudentUsers = (await User.find({ role: 'student' }).sort({ systemId: 1 }).select('_id systemId').lean()) as Array<{
+    _id: string
+    systemId: string
+  }>
   const maxExistingSequence = existingStudentUsers.reduce((maxSequence, student) => {
     const sequence = parseStudentSequence(student.systemId ?? '')
     return sequence > maxSequence ? sequence : maxSequence
@@ -1624,12 +1672,18 @@ export async function seedBulkStudents(options?: {
     ? await StudentProfile.insertMany(profilesToInsert, { ordered: true })
     : []
 
-  const allStudentUsers = await User.find({ role: 'student' }).select('_id systemId').lean()
+  const allStudentUsers = (await User.find({ role: 'student' }).select('_id systemId').lean()) as Array<{
+    _id: string
+    systemId: string
+  }>
   const studentUserIds = allStudentUsers.map((student) => student._id)
 
   await StudentProfile.deleteMany({ user: { $nin: studentUserIds } })
 
-  const existingProfiles = await StudentProfile.find({ user: { $in: studentUserIds } }).select('user studentNumber').lean()
+  const existingProfiles = (await StudentProfile.find({ user: { $in: studentUserIds } }).select('user studentNumber').lean()) as Array<{
+    user: string
+    studentNumber?: string | null
+  }>
   const profiledUserIds = new Set(existingProfiles.map((profile) => String(profile.user)))
   const existingStudentNumbers = new Set(existingProfiles.map((profile) => String(profile.studentNumber ?? '').trim()).filter(Boolean))
 

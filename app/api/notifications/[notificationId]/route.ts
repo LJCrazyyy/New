@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import { Notification } from '@/lib/system-models'
 import { isValidObjectId, normalizeError, serializeRecord } from '@/lib/api-resources'
 
@@ -24,6 +24,18 @@ function apiSuccess(data: unknown, status = 200) {
     },
     { status }
   )
+}
+
+function handleServerError(error: unknown, defaultStatus = 500) {
+  const message = normalizeError(error)
+
+  if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+    return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+      raw: message,
+    })
+  }
+
+  return apiError(message, defaultStatus)
 }
 
 type RouteContext = {
@@ -65,6 +77,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     return apiSuccess(serializeRecord(updatedNotification))
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }

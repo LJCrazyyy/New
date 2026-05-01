@@ -9,7 +9,7 @@ export async function POST() {
 
   try {
     const result = await seedSystemDatabase()
-    return Response.json({ success: true, message: 'MongoDB database seeded successfully.', result })
+    return Response.json({ success: true, message: 'Firebase database seeded successfully.', result })
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return Response.json({ success: false, message }, { status: 500 })

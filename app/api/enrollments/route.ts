@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import { Enrollment, Course, CoursePrerequisite, SystemSetting } from '@/lib/system-models'
 import { normalizeError, serializeRecord, applyPopulate, buildPagination, buildQueryFilter, buildSortClause } from '@/lib/api-resources'
 
@@ -72,6 +72,18 @@ function apiSuccess(data: unknown, status = 200, meta?: Record<string, unknown>)
   )
 }
 
+function handleServerError(error: unknown, defaultStatus = 500) {
+  const message = normalizeError(error)
+
+  if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+    return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+      raw: message,
+    })
+  }
+
+  return apiError(message, defaultStatus)
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectToDatabase()
@@ -105,7 +117,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }
 
@@ -143,11 +155,11 @@ export async function POST(request: NextRequest) {
 
     // Enforce a maximum of 50 active students per teacher per subject per semester.
     if (course.faculty) {
-      const teacherSubjectCourseIds = await Course.find({
+      const teacherSubjectCourseIds = (await Course.find({
         faculty: course.faculty,
         code: course.code,
         semester: body.semester,
-      }).select('_id')
+      }).select('_id')) as Array<{ _id: string }>
 
       const teacherSubjectActiveCount = await Enrollment.countDocuments({
         course: { $in: teacherSubjectCourseIds.map((entry) => entry._id) },
@@ -170,22 +182,27 @@ export async function POST(request: NextRequest) {
     }
 
     // Enforce prerequisite rules before enrollment
-    const prerequisites = await CoursePrerequisite.find({ course: body.course }).populate('prerequisiteCourse', 'code name')
+    const prerequisites = (await CoursePrerequisite.find({ course: body.course }).populate('prerequisiteCourse', 'code name')) as Array<{
+      prerequisiteCourse: { _id?: string } | string
+      minGrade?: string | null
+    }>
 
     if (prerequisites.length > 0) {
-      const completedEnrollments = await Enrollment.find({
+      const completedEnrollments = (await Enrollment.find({
         student: body.student,
         status: 'completed',
         average: { $ne: null },
-      }).populate('course', 'code name')
+      }).populate('course', 'code name')) as Array<{ course: { _id?: string } | string; gradeLetter?: string | null }>
 
       const completedByCourseId = new Map(
-        completedEnrollments.map((enrollment) => [String(enrollment.course?._id ?? enrollment.course), enrollment])
+        completedEnrollments.map((enrollment) => [String(typeof enrollment.course === 'string' ? enrollment.course : enrollment.course?._id ?? ''), enrollment])
       )
 
       const missingPrerequisites = prerequisites
         .map((prerequisite) => {
-          const prerequisiteCourseId = String(prerequisite.prerequisiteCourse?._id ?? prerequisite.prerequisiteCourse)
+          const prerequisiteCourseId = String(
+            typeof prerequisite.prerequisiteCourse === 'string' ? prerequisite.prerequisiteCourse : prerequisite.prerequisiteCourse?._id ?? ''
+          )
           const completedEnrollment = completedByCourseId.get(prerequisiteCourseId)
 
           if (!completedEnrollment) {
@@ -231,13 +248,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Check current enrolled units for this student in this semester
-    const currentEnrollments = await Enrollment.find({
+    const currentEnrollments = (await Enrollment.find({
       student: body.student,
       semester: body.semester,
       status: { $in: ['enrolled', 'pending'] }, // Don't count dropped or completed
-    }).populate('course', 'units')
+    }).populate('course', 'units')) as Array<{ course: { units?: number } | string }>
 
-    const currentUnits = currentEnrollments.reduce((sum, enrollment) => {
+    const currentUnits = currentEnrollments.reduce((sum: number, enrollment) => {
       const enrollmentUnits = (enrollment.course as any)?.units ?? 0
       return sum + enrollmentUnits
     }, 0)
@@ -269,12 +286,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the enrollment
-    const enrollment = await Enrollment.create({
+    const enrollment = (await Enrollment.create({
       student: body.student,
       course: body.course,
       semester: body.semester,
       status: body.status || 'pending',
-    })
+    })) as { _id: string }
 
     if (ACTIVE_ENROLLMENT_STATUSES.includes((body.status || 'pending') as (typeof ACTIVE_ENROLLMENT_STATUSES)[number])) {
       await syncCourseEnrolledCount(String(body.course), body.semester)
@@ -293,8 +310,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     const message = normalizeError(error)
 
-    if (message.includes('duplicate key') || message.includes('E11000')) {
+    if (typeof message === 'string' && (message.includes('duplicate key') || message.includes('E11000'))) {
       return apiError('Student is already enrolled in this course for this semester.', 409)
+    }
+
+    if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+      return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+        raw: message,
+      })
     }
 
     return apiError(message, 400)

@@ -1,4 +1,4 @@
-import type { Model } from 'mongoose'
+import type { FirestoreModel } from '@/lib/firestore-model'
 import {
   AcademicHistory,
   AdminProfile,
@@ -25,7 +25,7 @@ import {
 type PopulateConfig = Array<string | Record<string, unknown>>
 
 export type ApiResourceConfig = {
-  model: Model<any>
+  model: FirestoreModel<any>
   searchableFields: string[]
   defaultSort?: string
   defaultPopulate?: PopulateConfig
@@ -186,7 +186,7 @@ export const apiResources: Record<string, ApiResourceConfig> = {
 }
 
 export function isValidObjectId(value: string) {
-  return /^[a-fA-F0-9]{24}$/.test(value)
+  return typeof value === 'string' && value.trim().length > 0 && !value.includes('/')
 }
 
 export function serializeRecord(record: any): any {
@@ -313,7 +313,7 @@ export async function parseJsonBody(request: Request) {
   }
 }
 
-export async function applyPopulate(model: Model<any>, document: any, collectionName: string, populateParam?: string | null) {
+export async function applyPopulate(model: FirestoreModel<any>, document: any, collectionName: string, populateParam?: string | null) {
   const resource = getResourceConfig(collectionName)
   const explicitPopulate = populateParam
     ? populateParam

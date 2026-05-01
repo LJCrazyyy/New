@@ -1,4 +1,4 @@
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import {
   AuditLog,
   Course,
@@ -36,6 +36,18 @@ function apiSuccess(data: unknown, status = 200) {
     },
     { status }
   )
+}
+
+function handleServerError(error: unknown, defaultStatus = 500) {
+  const message = normalizeError(error)
+
+  if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+    return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+      raw: message,
+    })
+  }
+
+  return apiError(message, defaultStatus)
 }
 
 export async function GET() {
@@ -96,6 +108,6 @@ export async function GET() {
       recentCourses: normalizedRecentCourses,
     })
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }

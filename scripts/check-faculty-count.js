@@ -1,4 +1,4 @@
-const { connectToDatabase } = require('../lib/mongodb')
+const { connectToDatabase } = require('../lib/database')
 const { User, FacultyProfile } = require('../lib/system-models')
 
 async function main() {

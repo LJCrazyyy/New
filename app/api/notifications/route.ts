@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import { Notification } from '@/lib/system-models'
 import { normalizeError, serializeRecord } from '@/lib/api-resources'
 
@@ -25,6 +25,18 @@ function apiSuccess(data: unknown, status = 200, meta?: Record<string, unknown>)
     },
     { status }
   )
+}
+
+function handleServerError(error: unknown, defaultStatus = 500) {
+  const message = normalizeError(error)
+
+  if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+    return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+      raw: message,
+    })
+  }
+
+  return apiError(message, defaultStatus)
 }
 
 function buildRecipientFilter(searchParams: URLSearchParams) {
@@ -75,7 +87,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }
 
@@ -111,7 +123,7 @@ export async function POST(request: NextRequest) {
 
     return apiSuccess(serializeRecord(notification), 201)
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }
 
@@ -156,6 +168,6 @@ export async function PATCH(request: NextRequest) {
 
     return apiSuccess({ matchedCount: result.matchedCount, modifiedCount: result.modifiedCount })
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }

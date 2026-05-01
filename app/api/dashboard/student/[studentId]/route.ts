@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import {
   AcademicHistory,
   CounselingRecord,
@@ -41,6 +41,18 @@ function apiSuccess(data: unknown, status = 200) {
     },
     { status }
   )
+}
+
+function handleServerError(error: unknown, defaultStatus = 500) {
+  const message = normalizeError(error)
+
+  if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+    return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+      raw: message,
+    })
+  }
+
+  return apiError(message, defaultStatus)
 }
 
 function getYearLevelValue(yearLevel?: string | null) {
@@ -127,7 +139,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         { path: 'student', select: 'systemId name email role status' },
         { path: 'counselor', select: 'systemId name email role status' },
       ]),
-      DisciplineRecord.find({ student: studentUser._id }).sort({ incidentDate: -1 }).limit(10).populate({ path: 'student', select: 'systemId name email role status' }),
+      (await DisciplineRecord.find({ student: studentUser._id }).sort({ incidentDate: -1 }).limit(10).populate({ path: 'student', select: 'systemId name email role status' })) as Array<{
+        status?: string
+      }>,
       StudentDocument.find({ student: studentUser._id }).sort({ createdAt: -1 }).limit(10).populate({ path: 'student', select: 'systemId name email role status' }),
       StudentOrganization.find({ student: studentUser._id }).sort({ joinedAt: -1 }).limit(10).populate({ path: 'student', select: 'systemId name email role status' }),
     ])
@@ -226,6 +240,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       currentSemester,
     })
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }

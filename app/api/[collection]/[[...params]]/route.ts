@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import {
   applyPopulate,
   buildPagination,
@@ -138,6 +138,18 @@ function apiSuccess(data: unknown, status = 200, meta?: Record<string, unknown>)
   )
 }
 
+function handleServerError(error: unknown, defaultStatus = 500) {
+  const message = normalizeError(error)
+
+  if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+    return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+      raw: message,
+    })
+  }
+
+  return apiError(message, defaultStatus)
+}
+
 async function resolveResource(context: RouteContext) {
   const { collection, params = [] } = await context.params
   const resource = getResourceConfig(collection)
@@ -213,7 +225,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     return apiSuccess(serializeRecord(populatedRecord))
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }
 
@@ -255,7 +267,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           const semester = String(setting?.value ?? '')
 
           if (semester) {
-            const defaultCourses = await Course.find({ semester }).limit(4).select('_id')
+            const defaultCourses = (await Course.find({ semester }).limit(4).select('_id')) as Array<{ _id: string }>
 
             if (defaultCourses.length > 0) {
               await Promise.all(
@@ -303,8 +315,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
   } catch (error) {
     const message = normalizeError(error)
 
-    if (message.includes('duplicate key')) {
+    if (typeof message === 'string' && message.includes('duplicate key')) {
       return apiError('A record with the same unique field already exists.', 409)
+    }
+
+    if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+      return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+        raw: message,
+      })
     }
 
     return apiError(message, 400)
@@ -414,8 +432,14 @@ async function updateRecord(request: NextRequest, context: RouteContext) {
   } catch (error) {
     const message = normalizeError(error)
 
-    if (message.includes('duplicate key')) {
+    if (typeof message === 'string' && message.includes('duplicate key')) {
       return apiError('A record with the same unique field already exists.', 409)
+    }
+
+    if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+      return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+        raw: message,
+      })
     }
 
     return apiError(message, 400)
@@ -477,6 +501,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
 
     return apiSuccess(serializeRecord(deletedRecord))
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }

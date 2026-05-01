@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server'
-import { connectToDatabase } from '@/lib/mongodb'
+import { connectToDatabase } from '@/lib/database'
 import { Enrollment, FacultyProfile, Course, StudentProfile, User } from '@/lib/system-models'
 import { isValidObjectId, normalizeError, serializeRecord } from '@/lib/api-resources'
 
@@ -30,6 +30,18 @@ function apiSuccess(data: unknown, status = 200) {
     },
     { status }
   )
+}
+
+function handleServerError(error: unknown, defaultStatus = 500) {
+  const message = normalizeError(error)
+
+  if (typeof message === 'string' && message.includes('RESOURCE_EXHAUSTED')) {
+    return apiError('Service temporarily unavailable: quota exceeded. Please try again later or contact the administrator.', 503, {
+      raw: message,
+    })
+  }
+
+  return apiError(message, defaultStatus)
 }
 
 function getYearValue(yearLevel?: string | null) {
@@ -66,12 +78,12 @@ export async function GET(_request: NextRequest, context: RouteContext) {
         { path: 'user', select: 'systemId name email role status' },
         { path: 'coursesAssigned', select: 'code name section semester room units faculty enrolledCount capacity' },
       ]),
-      Course.find({ faculty: facultyUser._id }).sort({ code: 1 }).populate({ path: 'faculty', select: 'systemId name email role status' }),
+      (await Course.find({ faculty: facultyUser._id }).sort({ code: 1 }).populate({ path: 'faculty', select: 'systemId name email role status' })) as Array<{ _id: string }>,
     ])
 
     const courseIds = assignedCourses.map((course) => course._id)
 
-    const enrollments = await Enrollment.find({ course: { $in: courseIds } })
+    const enrollments = (await Enrollment.find({ course: { $in: courseIds } })
       .sort({ createdAt: -1 })
       .populate([
         { path: 'student', select: 'systemId name email role status' },
@@ -80,7 +92,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
           select: 'code name section semester schedule room units enrolledCount capacity faculty',
           populate: { path: 'faculty', select: 'systemId name email role status' },
         },
-      ])
+      ])) as Array<{ student: { _id?: string } | string }>
 
     const studentUserIds = Array.from(
       new Set(
@@ -90,7 +102,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       )
     )
 
-    const studentProfiles = await StudentProfile.find({ user: { $in: studentUserIds } })
+    const studentProfiles = (await StudentProfile.find({ user: { $in: studentUserIds } })) as Array<{
+      user: string
+      yearLevel?: string | null
+    }>
 
     const rosterSource = serializeRecord(enrollments)
     const rosterByStudent = new Map<string, any>()
@@ -171,6 +186,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       totalCourses: assignedCourses.length,
     })
   } catch (error) {
-    return apiError(normalizeError(error), 500)
+    return handleServerError(error, 500)
   }
 }

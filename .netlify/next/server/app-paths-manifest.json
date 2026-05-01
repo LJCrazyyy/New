@@ -1,0 +1,18 @@
+{
+  "/_not-found/page": "app/_not-found/page.js",
+  "/page": "app/page.js",
+  "/api/student-documents/upload/route": "app/api/student-documents/upload/route.js",
+  "/api/uploads/route": "app/api/uploads/route.js",
+  "/api/dashboard/faculty/[facultyId]/route": "app/api/dashboard/faculty/[facultyId]/route.js",
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/dashboard/admin/[adminId]/route": "app/api/dashboard/admin/[adminId]/route.js",
+  "/api/[collection]/[[...params]]/route": "app/api/[collection]/[[...params]]/route.js",
+  "/api/dev/seed-mongodb/route": "app/api/dev/seed-mongodb/route.js",
+  "/api/dev/seed-activities/route": "app/api/dev/seed-activities/route.js",
+  "/api/notifications/[notificationId]/route": "app/api/notifications/[notificationId]/route.js",
+  "/api/dashboard/admin/overview/route": "app/api/dashboard/admin/overview/route.js",
+  "/api/dev/seed-students/route": "app/api/dev/seed-students/route.js",
+  "/api/notifications/route": "app/api/notifications/route.js",
+  "/api/dashboard/student/[studentId]/route": "app/api/dashboard/student/[studentId]/route.js",
+  "/api/enrollments/route": "app/api/enrollments/route.js"
+}
